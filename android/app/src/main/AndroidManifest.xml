@@ -1,6 +1,21 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Permissions for background execution and location tracking -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    
     <application
-        android:label="flutter_application_1"
+        android:label="Fleet Driver"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -11,7 +26,9 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
@@ -25,6 +42,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        
+        <!-- Foreground service for background GPS tracking -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="location"
+            android:exported="false"
+            tools:replace="android:exported"/>
+            
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -40,6 +65,19 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- For launching map applications -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="google.navigation" />
         </intent>
     </queries>
 </manifest>

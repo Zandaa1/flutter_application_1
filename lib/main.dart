@@ -3,8 +3,17 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/pre_ride_screen.dart';
 import 'screens/active_ride_screen.dart';
+import 'screens/post_ride_screen.dart';
+import 'screens/fuel_receipt_screen.dart';
+import 'screens/chat_screen.dart';
+import 'services/background_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize background service
+  await BackgroundService.initializeService();
+  
   runApp(const FleetDriverApp());
 }
 
@@ -29,7 +38,7 @@ class FleetDriverApp extends StatelessWidget {
           centerTitle: true,
           elevation: 2,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -57,7 +66,7 @@ class FleetDriverApp extends StatelessWidget {
           centerTitle: true,
           elevation: 2,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -83,81 +92,10 @@ class FleetDriverApp extends StatelessWidget {
         '/dashboard': (context) => const DashboardScreen(),
         '/pre-ride': (context) => const PreRideScreen(),
         '/active-ride': (context) => const ActiveRideScreen(),
+        '/post-ride': (context) => const PostRideScreen(),
+        '/fuel-receipt': (context) => const FuelReceiptScreen(),
+        '/chat': (context) => const ChatScreen(),
       },
-    );
-  }
-}
-                  fontSize: 26,
-                  color: Color(0xFF1C1C1C),
-                ),
-              ),
-              SizedBox(height: 6),
-              Text(
-                'Sign In to continue',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.normal,
-                  fontSize: 18,
-                  color: Color(0xFF1C1C1C),
-                ),
-              ),
-              SizedBox(height: 26),
-              TextField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-              ),
-              SizedBox(height: 26),
-              SizedBox(
-                width: double.infinity,
-                height: 49,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Handle login
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF3B62FF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'Login',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 26),
-              Center(
-                  child: Text(
-                    'Forgot Password?',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF87879D),
-                    ),
-                  ),
-              ),
-              SizedBox(height: 10),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

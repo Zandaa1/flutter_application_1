@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/image_picker_helper.dart';
 
-class PreRideScreen extends StatefulWidget {
-  const PreRideScreen({Key? key}) : super(key: key);
+class PostRideScreen extends StatefulWidget {
+  const PostRideScreen({Key? key}) : super(key: key);
 
   @override
-  State<PreRideScreen> createState() => _PreRideScreenState();
+  State<PostRideScreen> createState() => _PostRideScreenState();
 }
 
-class _PreRideScreenState extends State<PreRideScreen> {
+class _PostRideScreenState extends State<PostRideScreen> {
   XFile? _truckExteriorPhoto;
   XFile? _odometerPhoto;
   XFile? _manifestPhoto;
+  bool _locationConfirmed = false;
+
+  bool get _allCompleted =>
+      _truckExteriorPhoto != null &&
+      _odometerPhoto != null &&
+      _manifestPhoto != null &&
+      _locationConfirmed;
 
   Future<void> _pickImage(String type) async {
     final XFile? image = await ImagePickerHelper.showImageSourceDialog(context);
@@ -38,7 +45,7 @@ class _PreRideScreenState extends State<PreRideScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pre-Ride Check'),
+        title: const Text('Post-Ride Check'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -50,12 +57,12 @@ class _PreRideScreenState extends State<PreRideScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pre-Ride Inspection',
+                    'Post-Ride Inspection',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Complete all required checks before starting your trip',
+                    'Complete all required checks before ending your trip',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -66,38 +73,64 @@ class _PreRideScreenState extends State<PreRideScreen> {
           _ChecklistItem(
             icon: Icons.local_shipping,
             title: 'Truck Exterior Photo',
-            subtitle: 'Take photo of truck condition',
+            subtitle: 'Take photo of final truck condition',
             isCompleted: _truckExteriorPhoto != null,
             onTap: () => _pickImage('truck'),
           ),
           _ChecklistItem(
             icon: Icons.speed,
             title: 'Odometer Reading',
-            subtitle: 'Capture starting mileage',
+            subtitle: 'Capture ending mileage',
             isCompleted: _odometerPhoto != null,
             onTap: () => _pickImage('odometer'),
           ),
           _ChecklistItem(
             icon: Icons.description,
             title: 'Manifest Photo',
-            subtitle: 'Upload delivery manifest',
+            subtitle: 'Upload signed delivery manifest',
             isCompleted: _manifestPhoto != null,
             onTap: () => _pickImage('manifest'),
           ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Submit pre-ride check
+          _ChecklistItem(
+            icon: Icons.location_on,
+            title: 'Location Verification',
+            subtitle: 'Confirm you are at the destination',
+            isCompleted: _locationConfirmed,
+            onTap: () {
+              // TODO: Verify GPS location matches destination
+              setState(() {
+                _locationConfirmed = true;
+              });
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Pre-ride check submitted')),
+                const SnackBar(content: Text('Location verified')),
               );
             },
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _allCompleted
+                ? () {
+                    // Navigate back and end ride
+                    Navigator.pop(context, true);
+                  }
+                : null,
             icon: const Icon(Icons.check_circle),
-            label: const Text('Complete Pre-Ride Check'),
+            label: const Text('Complete Post-Ride Check'),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.all(16),
+              backgroundColor: _allCompleted ? Colors.green : null,
             ),
           ),
+          if (!_allCompleted) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Please complete all checks to end your ride',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.orange,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
       ),
     );

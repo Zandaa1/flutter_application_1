@@ -66,5 +66,28 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	
+	<!-- Background modes for location tracking -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	
+	<!-- Location permissions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs your location to track deliveries and navigate to destinations.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs your location in the background to track your active ride and provide real-time updates to the admin.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs your location in the background to track your active ride and provide real-time updates to the admin.</string>
+	
+	<!-- Camera permissions -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to take photos of truck exterior, odometer, manifest, and fuel receipts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs photo library access to upload photos of truck exterior, odometer, manifest, and fuel receipts.</string>
+	
 </dict>
 </plist>
