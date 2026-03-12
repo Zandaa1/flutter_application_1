@@ -18,6 +18,11 @@ class MainActivity : FlutterActivity() {
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Shows when Fleet Driver is running in the background"
+                // Make channel non-blockable to prevent users from turning it off
+                setBlockable(false)
+                // Prevent notification sound and vibration
+                setSound(null, null)
+                enableVibration(false)
             }
             
             val notificationManager = getSystemService(NotificationManager::class.java)

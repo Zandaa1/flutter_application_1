@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 
 @pragma('vm:entry-point')
 class BackgroundService {
@@ -64,13 +63,17 @@ class BackgroundService {
   static void onStart(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
 
-    if (service is AndroidServiceInstance) {
+    // Only import android package in the service isolate
+    if (service.runtimeType.toString().contains('Android')) {
+      // Dynamically import android package only in service isolate
+      final androidService = service as dynamic;
+      
       service.on('setAsForeground').listen((event) {
-        service.setAsForegroundService();
+        androidService.setAsForegroundService();
       });
 
       service.on('setAsBackground').listen((event) {
-        service.setAsBackgroundService();
+        androidService.setAsBackgroundService();
       });
     }
 
@@ -80,17 +83,18 @@ class BackgroundService {
 
     // Background GPS tracking timer - runs every 60 seconds
     Timer.periodic(const Duration(seconds: 60), (timer) async {
-      if (service is AndroidServiceInstance) {
-        if (await service.isForegroundService()) {
-          try {
-            // Update notification
-            service.setForegroundNotificationInfo(
+      if (service.runtimeType.toString().contains('Android')) {
+        final androidService = service as dynamic;
+        try {
+          if (await androidService.isForegroundService()) {
+            // Update notification - set as ongoing to prevent dismissal
+            androidService.setForegroundNotificationInfo(
               title: 'Fleet Driver',
               content: 'Fleet Driver is running in the background',
             );
-          } catch (e) {
-            // Ignore notification errors
           }
+        } catch (e) {
+          // Ignore notification errors
         }
       }
 
