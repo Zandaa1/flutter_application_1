@@ -13,6 +13,7 @@ class _PreRideScreenState extends State<PreRideScreen> {
   XFile? _truckExteriorPhoto;
   XFile? _odometerPhoto;
   XFile? _manifestPhoto;
+  XFile? _fuelDetailsPhoto;
 
   Future<void> _pickImage(String type) async {
     final XFile? image = await ImagePickerHelper.showImageSourceDialog(context);
@@ -24,6 +25,8 @@ class _PreRideScreenState extends State<PreRideScreen> {
           _odometerPhoto = image;
         } else if (type == 'manifest') {
           _manifestPhoto = image;
+        } else if (type == 'fuel') {
+          _fuelDetailsPhoto = image;
         }
       });
       if (mounted) {
@@ -83,6 +86,13 @@ class _PreRideScreenState extends State<PreRideScreen> {
             subtitle: 'Upload delivery manifest',
             isCompleted: _manifestPhoto != null,
             onTap: () => _pickImage('manifest'),
+          ),
+          _ChecklistItem(
+            icon: Icons.local_gas_station,
+            title: 'Fuel Details',
+            subtitle: 'Capture fuel level/receipt',
+            isCompleted: _fuelDetailsPhoto != null,
+            onTap: () => _pickImage('fuel'),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(

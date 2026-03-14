@@ -23,27 +23,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
       truckNumber: 'TRK-2025',
       destination: 'Manila Warehouse',
       destinationAddress: '123 Rizal Avenue, Manila',
-      date: DateTime.now(),
+      departureDate: DateTime.now(),
+      arrivalDate: DateTime.now(),
       expectedDeparture: '08:00 AM',
       expectedArrival: '12:00 PM',
       status: RideStatus.current,
+      remarks: 'Priority delivery - Handle with care. Contact warehouse manager upon arrival.',
     ),
     Ride(
       id: '2',
       truckNumber: 'TRK-2025',
       destination: 'Cebu Distribution Center',
       destinationAddress: '456 Osmena Blvd, Cebu City',
-      date: DateTime.now().add(const Duration(days: 1)),
+      departureDate: DateTime.now().add(const Duration(days: 1)),
+      arrivalDate: DateTime.now().add(const Duration(days: 3)),
       expectedDeparture: '06:00 AM',
       expectedArrival: '02:00 PM',
       status: RideStatus.upcoming,
+      remarks: 'Fragile items on board. Avoid rough roads if possible.',
     ),
     Ride(
       id: '3',
       truckNumber: 'TRK-2025',
       destination: 'Davao Supply Hub',
       destinationAddress: '789 Roxas Avenue, Davao',
-      date: DateTime.now().add(const Duration(days: 2)),
+      departureDate: DateTime.now().add(const Duration(days: 2)),
+      arrivalDate: DateTime.now().add(const Duration(days: 4)),
       expectedDeparture: '07:30 AM',
       expectedArrival: '01:00 PM',
       status: RideStatus.upcoming,
@@ -53,7 +58,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       truckNumber: 'TRK-2025',
       destination: 'Quezon City Depot',
       destinationAddress: '321 Commonwealth Ave, QC',
-      date: DateTime.now().subtract(const Duration(days: 1)),
+      departureDate: DateTime.now().subtract(const Duration(days: 2)),
+      arrivalDate: DateTime.now().subtract(const Duration(days: 1)),
       expectedDeparture: '09:00 AM',
       expectedArrival: '11:30 AM',
       status: RideStatus.past,
@@ -290,6 +296,7 @@ class _RideCardState extends State<_RideCard> with SingleTickerProviderStateMixi
                         children: [
                           // Expected Departure
                           Expanded(
+                            flex: 2,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -306,36 +313,37 @@ class _RideCardState extends State<_RideCard> with SingleTickerProviderStateMixi
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  DateFormat('MMM dd, yyyy').format(widget.ride.departureDate),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: isCurrentRide 
+                                            ? Colors.orange
+                                            : Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
                               ],
                             ),
                           ),
-                          // Date
+                          // Arrow indicator
                           Expanded(
+                            flex: 1,
                             child: Column(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: isCurrentRide
-                                        ? Colors.orange
-                                        : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    DateFormat('MMM dd').format(widget.ride.date),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isCurrentRide
-                                          ? Colors.white
-                                          : Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
+                                Icon(
+                                  Icons.arrow_forward,
+                                  color: isCurrentRide 
+                                      ? Colors.orange
+                                      : Theme.of(context).colorScheme.primary,
+                                  size: 24,
                                 ),
                               ],
                             ),
                           ),
                           // Expected Arrival
                           Expanded(
+                            flex: 2,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
@@ -352,11 +360,58 @@ class _RideCardState extends State<_RideCard> with SingleTickerProviderStateMixi
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  DateFormat('MMM dd, yyyy').format(widget.ride.arrivalDate),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: isCurrentRide 
+                                            ? Colors.orange
+                                            : Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
                               ],
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      // Trip duration indicator
+                      if (widget.ride.arrivalDate.difference(widget.ride.departureDate).inDays > 0)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isCurrentRide
+                                  ? Colors.orange.withOpacity(0.15)
+                                  : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  size: 14,
+                                  color: isCurrentRide
+                                      ? Colors.orange
+                                      : Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${widget.ride.arrivalDate.difference(widget.ride.departureDate).inDays} day${widget.ride.arrivalDate.difference(widget.ride.departureDate).inDays > 1 ? 's' : ''} trip',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isCurrentRide
+                                        ? Colors.orange
+                                        : Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 12),
@@ -409,6 +464,58 @@ class _RideCardState extends State<_RideCard> with SingleTickerProviderStateMixi
                           ),
                         ],
                       ),
+                      // Admin remarks
+                      if (widget.ride.remarks != null && widget.ride.remarks!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isCurrentRide 
+                                ? Colors.orange.withOpacity(0.1)
+                                : Colors.blue.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isCurrentRide 
+                                  ? Colors.orange.withOpacity(0.3)
+                                  : Colors.blue.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 18,
+                                color: isCurrentRide ? Colors.orange : Colors.blue,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Admin Notes:',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isCurrentRide ? Colors.orange : Colors.blue,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      widget.ride.remarks!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       if (isCurrentRide) ...[
                         const SizedBox(height: 16),
                         Container(

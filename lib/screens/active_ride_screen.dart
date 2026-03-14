@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import '../services/background_service.dart';
 import '../models/ride.dart';
@@ -21,10 +22,12 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     truckNumber: 'TRK-2025',
     destination: 'Manila Warehouse',
     destinationAddress: '123 Rizal Avenue, Manila',
-    date: DateTime.now(),
+    departureDate: DateTime.now(),
+    arrivalDate: DateTime.now().add(const Duration(days: 2)),
     expectedDeparture: '08:00 AM',
     expectedArrival: '12:00 PM',
     status: RideStatus.current,
+    remarks: 'Priority delivery - Handle with care. Contact warehouse manager upon arrival.',
   );
   
   final double _destinationLat = 14.5995;
@@ -89,6 +92,44 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _sendEmergencyAlert() async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Emergency Alert'),
+        content: const Text(
+          'This will send an emergency notification to the admin. Use only in case of accidents, vehicle issues, or urgent situations.\n\nDo you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Send Alert'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      // TODO: Send emergency alert to server API
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Emergency alert sent to admin'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -163,7 +204,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
             ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,12 +259,283 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                             ),
                           ),
                           const SizedBox(height: 12),
-                          _RouteInfoRow(
-                            icon: Icons.access_time,
-                            label: 'Expected Arrival',
-                            value: _currentRide.expectedArrival,
+                          // Departure Info
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.schedule, size: 20, color: Colors.grey[600]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Departure:',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _currentRide.expectedDeparture,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      DateFormat('EEEE, MMM dd, yyyy').format(_currentRide.departureDate),
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 12),
+                          // Expected Arrival Info
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.access_time, size: 20, color: Colors.grey[600]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Expected Arrival:',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _currentRide.expectedArrival,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      DateFormat('EEEE, MMM dd, yyyy').format(_currentRide.arrivalDate),
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Admin remarks
+                          if (_currentRide.remarks != null && _currentRide.remarks!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            const Divider(),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.3),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.assignment,
+                                    size: 20,
+                                    color: Colors.orange,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Admin Instructions:',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange.shade700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _currentRide.remarks!,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[800],
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Map Preview Card
+                  Card(
+                    elevation: 4,
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: _openGoogleMaps,
+                      child: Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.blue.shade50,
+                              Colors.green.shade50,
+                            ],
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            // Map-like background pattern
+                            Positioned.fill(
+                              child: CustomPaint(
+                                painter: _MapPatternPainter(),
+                              ),
+                            ),
+                            // Content
+                            Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.blue.withOpacity(0.3),
+                                          blurRadius: 12,
+                                          spreadRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.navigation,
+                                      size: 40,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.map,
+                                          color: Colors.blue,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Tap to Open Navigation',
+                                          style: TextStyle(
+                                            color: Colors.blue,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _currentRide.destination,
+                                      style: TextStyle(
+                                        color: Colors.grey[800],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Corner badge
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'GPS',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -258,13 +570,6 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                 const SizedBox(height: 16),
             if (_isRideActive) ...[
               _ActionButton(
-                icon: Icons.map,
-                label: 'Open Google Maps',
-                color: Colors.blue,
-                onPressed: _openGoogleMaps,
-              ),
-              const SizedBox(height: 12),
-              _ActionButton(
                 icon: Icons.receipt,
                 label: 'Upload Fuel Receipt',
                 color: Colors.orange,
@@ -281,7 +586,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                   Navigator.pushNamed(context, '/chat');
                 },
               ),
-              const Spacer(),
+              const SizedBox(height: 12),
+              _ActionButton(
+                icon: Icons.warning,
+                label: 'Emergency Alert',
+                color: Colors.red,
+                onPressed: _sendEmergencyAlert,
+              ),
+              const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _endRide,
                 icon: const Icon(Icons.stop_circle),
@@ -293,7 +605,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                 ),
               ),
             ] else ...[
-              const Spacer(),
+              const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _startRide,
                 icon: const Icon(Icons.play_arrow),
@@ -375,4 +687,48 @@ class _ActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// Custom painter for map-like background pattern
+class _MapPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey.withOpacity(0.15)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    // Draw grid lines (like map streets)
+    for (double i = 0; i < size.width; i += 30) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i, size.height),
+        paint,
+      );
+    }
+    for (double i = 0; i < size.height; i += 30) {
+      canvas.drawLine(
+        Offset(0, i),
+        Offset(size.width, i),
+        paint,
+      );
+    }
+
+    // Draw some diagonal "roads"
+    paint.color = Colors.blue.withOpacity(0.2);
+    paint.strokeWidth = 3;
+    canvas.drawLine(
+      Offset(0, size.height * 0.3),
+      Offset(size.width, size.height * 0.7),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.2, 0),
+      Offset(size.width * 0.8, size.height),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -22,7 +22,7 @@ class BackgroundService {
         autoStartOnBoot: false,
         notificationChannelId: 'fleet_driver_channel',
         initialNotificationTitle: 'Fleet Driver',
-        initialNotificationContent: 'Fleet Driver is running in the background',
+        initialNotificationContent: 'GPS tracking active - Location updated every 5 minutes',
         foregroundServiceNotificationId: 888,
       ),
     );
@@ -63,17 +63,25 @@ class BackgroundService {
   static void onStart(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
 
-    // Only import android package in the service isolate
+    // Only android-specific setup
     if (service.runtimeType.toString().contains('Android')) {
-      // Dynamically import android package only in service isolate
       final androidService = service as dynamic;
       
-      service.on('setAsForeground').listen((event) {
-        androidService.setAsForegroundService();
+      // Immediately set as foreground - this creates the initial ongoing notification
+      try {
+        await androidService.setAsForegroundService();
+        print('Service set as foreground successfully');
+      } catch (e) {
+        print('Error setting foreground: $e');
+      }
+      
+      service.on('setAsForeground').listen((event) async {
+        await androidService.setAsForegroundService();
       });
 
       service.on('setAsBackground').listen((event) {
-        androidService.setAsBackgroundService();
+        // Prevent setting as background - keep it foreground always
+        androidService.setAsForegroundService();
       });
     }
 
@@ -81,27 +89,30 @@ class BackgroundService {
       service.stopSelf();
     });
 
-    // Background GPS tracking timer - runs every 60 seconds
-    Timer.periodic(const Duration(seconds: 60), (timer) async {
+    // Background GPS tracking timer - runs every 5 minutes (per project requirements)
+    Timer.periodic(const Duration(seconds: 300), (timer) async {
       if (service.runtimeType.toString().contains('Android')) {
         final androidService = service as dynamic;
         try {
-          if (await androidService.isForegroundService()) {
-            // Update notification - set as ongoing to prevent dismissal
-            androidService.setForegroundNotificationInfo(
-              title: 'Fleet Driver',
-              content: 'Fleet Driver is running in the background',
-            );
+          // Check if still foreground
+          bool isForeground = await androidService.isForegroundService();
+          if (!isForeground) {
+            await androidService.setAsForegroundService();
+            print('Restored foreground service status');
           }
+          
+          // DO NOT call setForegroundNotificationInfo() here  
+          // as it might recreate the notification without the ongoing flag
+          // The initial notification from AndroidConfiguration is already ongoing
         } catch (e) {
-          // Ignore notification errors
+          print('Error in service loop: $e');
         }
       }
 
       // TODO: Get current GPS location
-      // TODO: Send location to server API
+      // TODO: Send location to server API (every 5 minutes as per requirements)
       
-      // Example: Send data back to UI
+      // Send data back to UI
       service.invoke('update', {
         'current_date': DateTime.now().toIso8601String(),
         'status': 'tracking',
