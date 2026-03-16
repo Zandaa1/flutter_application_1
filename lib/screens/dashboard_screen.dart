@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ride.dart';
+import '../services/notification_test_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -20,7 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<Ride> _rides = [
     Ride(
       id: '1',
-      truckNumber: 'TRK-2025',
+      truckNumber: 'ABC-1234',
       destination: 'Manila Warehouse',
       destinationAddress: '123 Rizal Avenue, Manila',
       departureDate: DateTime.now(),
@@ -65,6 +66,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
       status: RideStatus.past,
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationTestService.notificationNotifier
+        .addListener(_handleTestNotification);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleTestNotification();
+    });
+  }
+
+  @override
+  void dispose() {
+    NotificationTestService.notificationNotifier
+        .removeListener(_handleTestNotification);
+    super.dispose();
+  }
+
+  void _handleTestNotification() {
+    final notification = NotificationTestService.consumeNotification();
+    if (notification == null || !mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(notification.message),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;

@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/notification_test_service.dart';
 
 class AdminToolsScreen extends StatefulWidget {
   const AdminToolsScreen({Key? key}) : super(key: key);
@@ -255,6 +256,23 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     });
   }
 
+  void _sendTestTripNotification() {
+    final testTripDate = DateTime.now().add(const Duration(days: 1));
+    const testDestination = 'Manila Warehouse';
+
+    NotificationTestService.sendTripAssignedNotification(
+      tripDate: testTripDate,
+      destination: testDestination,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Test trip notification sent. Open Dashboard to verify.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   String _permissionLabel(LocationPermission? permission) {
     switch (permission) {
       case LocationPermission.always:
@@ -363,6 +381,12 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
               onPressed: _showDeviceMismatchDialog,
               icon: const Icon(Icons.phonelink_erase),
               label: const Text('Simulate Device Mismatch'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _sendTestTripNotification,
+              icon: const Icon(Icons.notifications_active),
+              label: const Text('Send Test Trip Notification'),
             ),
 
             if (isDeniedForever) ...[

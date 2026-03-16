@@ -667,7 +667,11 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                 label: 'Upload Fuel Receipt',
                 color: Colors.orange,
                 onPressed: () {
-                  Navigator.pushNamed(context, '/fuel-receipt');
+                  Navigator.pushNamed(
+                    context,
+                    '/fuel-receipt',
+                    arguments: _currentRide.id,
+                  );
                 },
               ),
               const SizedBox(height: 12),
