@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
+import 'background_service.dart';
 
 class NotificationTestService {
-  static const String _channelId = 'trip_assignment_important_v1';
+  static const String _channelId = 'trip_assignment_important_v2';
   static const String _channelName = 'Trip Assignment Alerts';
   static const String _channelDescription =
       'Important notifications when a new trip is assigned.';
+  static const String _trackingChannelName = 'Ride Tracking Alerts';
+  static const String _trackingChannelDescription =
+      'Foreground ride tracking notifications and service status.';
 
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -33,6 +37,17 @@ class NotificationTestService {
         _channelName,
         description: _channelDescription,
         importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
+
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        BackgroundService.trackingNotificationChannelId,
+        _trackingChannelName,
+        description: _trackingChannelDescription,
+        importance: Importance.high,
         playSound: true,
         enableVibration: true,
       ),

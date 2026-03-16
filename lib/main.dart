@@ -12,12 +12,12 @@ import 'services/notification_test_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize local notification channels first.
+  await NotificationTestService.initialize();
   
   // Initialize background service
   await BackgroundService.initializeService();
-
-  // Initialize local notifications for trip assignment alerts
-  await NotificationTestService.initialize();
   
   runApp(const FleetDriverApp());
 }

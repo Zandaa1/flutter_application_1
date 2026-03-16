@@ -5,11 +5,14 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 
 @pragma('vm:entry-point')
 class BackgroundService {
-  static final FlutterBackgroundService _service = FlutterBackgroundService();
+  static const String trackingNotificationChannelId =
+      'fleet_driver_tracking_alerts_v1';
 
   @pragma('vm:entry-point')
   static Future<void> initializeService() async {
-    await _service.configure(
+    final service = FlutterBackgroundService();
+
+    await service.configure(
       iosConfiguration: IosConfiguration(
         autoStart: false,
         onForeground: onStart,
@@ -20,9 +23,9 @@ class BackgroundService {
         isForegroundMode: true,
         autoStart: false,
         autoStartOnBoot: false,
-        notificationChannelId: 'fleet_driver_channel',
-        initialNotificationTitle: 'Fleet Driver',
-        initialNotificationContent: 'GPS tracking active - Location updated every 5 minutes',
+        notificationChannelId: trackingNotificationChannelId,
+        initialNotificationTitle: 'GPS Tracking is Active',
+        initialNotificationContent: 'Your trip has started. GPS tracking is active.',
         foregroundServiceNotificationId: 888,
       ),
     );
@@ -31,9 +34,10 @@ class BackgroundService {
   @pragma('vm:entry-point')
   static Future<bool> startService() async {
     try {
-      bool isRunning = await _service.isRunning();
+      final service = FlutterBackgroundService();
+      bool isRunning = await service.isRunning();
       if (!isRunning) {
-        return await _service.startService();
+        return await service.startService();
       }
       return true;
     } catch (e) {
@@ -44,9 +48,10 @@ class BackgroundService {
 @pragma('vm:entry-point')
   
   static Future<bool> stopService() async {
-    bool isRunning = await _service.isRunning();
+    final service = FlutterBackgroundService();
+    bool isRunning = await service.isRunning();
     if (isRunning) {
-      _service.invoke('stop');
+      service.invoke('stop');
       return true;
     }
     return false;
@@ -61,7 +66,9 @@ class BackgroundService {
 
   @pragma('vm:entry-point')
   static void onStart(ServiceInstance service) async {
-    DartPluginRegistrant.ensureInitialized();
+    // Avoid auto-registering all plugins in Android background isolate.
+    // Registering flutter_background_service_android again here triggers
+    // "only be used in the main isolate" warnings.
 
     // Only android-specific setup
     if (service.runtimeType.toString().contains('Android')) {
@@ -122,7 +129,8 @@ class BackgroundService {
 
   @pragma('vm:entry-point')
   static void listenToService(Function(Map<String, dynamic>?) onData) {
-    _service.on('update').listen((event) {
+    final service = FlutterBackgroundService();
+    service.on('update').listen((event) {
       onData(event);
     });
   }
