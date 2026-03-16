@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -12,12 +16,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  String? _deviceId;
 
   @override
   void initState() {
     super.initState();
     // Request permissions as soon as login screen loads
     _requestPermissions();
+    _loadDeviceId();
   }
 
   @override
@@ -71,6 +77,36 @@ class _LoginScreenState extends State<LoginScreen> {
       // User permanently denied permission, open settings
       await openAppSettings();
     }
+  }
+
+  Future<void> _loadDeviceId() async {
+    final deviceInfo = DeviceInfoPlugin();
+    String? deviceId;
+
+    try {
+      if (kIsWeb) {
+        deviceId = 'Web';
+      } else if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        deviceId = androidInfo.id;
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        deviceId = iosInfo.identifierForVendor;
+      } else {
+        final info = await deviceInfo.deviceInfo;
+        deviceId = info.data['id']?.toString();
+      }
+    } catch (_) {
+      deviceId = null;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _deviceId = deviceId;
+    });
   }
 
   Future<void> _handleLogin() async {
@@ -172,9 +208,43 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 child: const Text('Forgot Password?'),
               ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Admin Only'),
+                      content: const Text(
+                        'This area is for admin testing only. Continue?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(context, '/admin-tools');
+                          },
+                          child: const Text('Continue'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.admin_panel_settings),
+                label: const Text('Admin Tools (GPS Test)'),
+              ),
               const SizedBox(height: 48),
               Text(
                 '© 2026 Fleet Management Inc. v1.0.0',
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                'Device ID: ${_deviceId ?? 'Loading...'}',
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),

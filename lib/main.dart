@@ -6,6 +6,7 @@ import 'screens/active_ride_screen.dart';
 import 'screens/post_ride_screen.dart';
 import 'screens/fuel_receipt_screen.dart';
 import 'screens/chat_screen.dart';
+import 'screens/admin_tools_screen.dart';
 import 'services/background_service.dart';
 
 void main() async {
@@ -95,6 +96,7 @@ class FleetDriverApp extends StatelessWidget {
         '/post-ride': (context) => const PostRideScreen(),
         '/fuel-receipt': (context) => const FuelReceiptScreen(),
         '/chat': (context) => const ChatScreen(),
+        '/admin-tools': (context) => const AdminToolsScreen(),
       },
     );
   }

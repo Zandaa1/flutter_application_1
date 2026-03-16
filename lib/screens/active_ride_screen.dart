@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import '../services/background_service.dart';
@@ -15,6 +18,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     with SingleTickerProviderStateMixin {
   bool _isRideActive = false;
   late AnimationController _blinkController;
+  StreamSubscription<Position>? _positionSubscription;
+  Position? _currentPosition;
+  DateTime? _lastUpdatedAt;
   
   // TODO: Replace with actual ride data from route arguments
   final Ride _currentRide = Ride(
@@ -53,8 +59,47 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
 
   @override
   void dispose() {
+    _positionSubscription?.cancel();
     _blinkController.dispose();
     super.dispose();
+  }
+
+  Future<void> _startLocationTracking() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    await _positionSubscription?.cancel();
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).listen((position) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _currentPosition = position;
+        _lastUpdatedAt = DateTime.now();
+      });
+    });
+  }
+
+  Future<void> _stopLocationTracking() async {
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
   }
 
   Future<void> _openGoogleMaps() async {
@@ -83,6 +128,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
       setState(() {
         _isRideActive = true;
       });
+      await _startLocationTracking();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -141,6 +187,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     if (result == true) {
       // Stop background service
       await BackgroundService.stopService();
+      await _stopLocationTracking();
       
       setState(() {
         _isRideActive = false;
@@ -159,6 +206,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
 
   @override
   Widget build(BuildContext context) {
+    final currentLocationLabel = _currentPosition == null
+      ? 'Getting for GPS Location...'
+      : 'Lat ${_currentPosition!.latitude.toStringAsFixed(6)}, '
+        'Lng ${_currentPosition!.longitude.toStringAsFixed(6)}';
+    final lastUpdatedLabel = _lastUpdatedAt == null
+      ? 'Last updated: --'
+      : 'Last updated: ${DateFormat('hh:mm a').format(_lastUpdatedAt!)}';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Active Ride'),
@@ -257,6 +312,44 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                                 color: Colors.grey[600],
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.gps_fixed, size: 20, color: Colors.grey[600]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Current location:',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      currentLocationLabel,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      lastUpdatedLabel,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 12),
                           // Departure Info
