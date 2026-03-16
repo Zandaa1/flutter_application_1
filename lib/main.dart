@@ -8,12 +8,16 @@ import 'screens/fuel_receipt_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/admin_tools_screen.dart';
 import 'services/background_service.dart';
+import 'services/notification_test_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize background service
   await BackgroundService.initializeService();
+
+  // Initialize local notifications for trip assignment alerts
+  await NotificationTestService.initialize();
   
   runApp(const FleetDriverApp());
 }

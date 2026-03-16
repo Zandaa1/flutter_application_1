@@ -256,20 +256,13 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     });
   }
 
-  void _sendTestTripNotification() {
+  Future<void> _sendTestTripNotification() async {
     final testTripDate = DateTime.now().add(const Duration(days: 1));
     const testDestination = 'Manila Warehouse';
 
-    NotificationTestService.sendTripAssignedNotification(
+    await NotificationTestService.sendTripAssignedNotification(
       tripDate: testTripDate,
       destination: testDestination,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Test trip notification sent. Open Dashboard to verify.'),
-        backgroundColor: Colors.green,
-      ),
     );
   }
 
