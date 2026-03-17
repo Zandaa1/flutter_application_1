@@ -1,3 +1,31 @@
 {
-    "cmake.sourceDirectory": "E:/OJTCoding/flutterTest/flutter_application_1/windows"
+    "cmake.sourceDirectory": "E:/OJTCoding/flutterTest/flutter_application_1/windows",
+    "dart.mcpServer": true,
+    "dart.enableSdkFormatter": true,
+    "dart.previewFlutterUiGuides": true,
+    "dart.lineLength": 80,
+    "[dart]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.fixAll.dartAnalyzer": "explicit"
+        },
+        "editor.defaultFormatter": "Dart-Code.dart-code",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "search.exclude": {
+        "**/.dart_tool": true,
+        "**/build": true,
+        "**/.flutter-plugins-dependencies": true
+    },
+    "files.exclude": {
+        "**/.dart_tool": true,
+        "**/build": true,
+        "**/.flutter-plugins-dependencies": true
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

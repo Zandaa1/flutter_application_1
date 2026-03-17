@@ -12,6 +12,25 @@ class FuelReceiptRecord {
     required this.liters,
     required this.uploadedAt,
   });
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'photoName': photoName,
+        'totalPesos': totalPesos,
+        'pricePerLiter': pricePerLiter,
+        'liters': liters,
+        'uploadedAt': uploadedAt.toIso8601String(),
+      };
+
+  static FuelReceiptRecord fromJson(Map<String, Object?> json) {
+    return FuelReceiptRecord(
+      photoName: (json['photoName'] as String?) ?? '',
+      totalPesos: (json['totalPesos'] as num?)?.toDouble() ?? 0,
+      pricePerLiter: (json['pricePerLiter'] as num?)?.toDouble() ?? 0,
+      liters: (json['liters'] as num?)?.toDouble() ?? 0,
+      uploadedAt: DateTime.tryParse((json['uploadedAt'] as String?) ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
 }
 
 class FuelReceiptHistoryService {

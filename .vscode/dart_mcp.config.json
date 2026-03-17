@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "serverType": "dart_mcp",
+  "enabled": true,
+  "description": "Dart MCP Server for Flutter code completion and intelligence",
+  "features": {
+    "codeCompletion": true,
+    "codeAnalysis": true,
+    "documentSymbols": true,
+    "hoverInfo": true,
+    "goToDefinition": true,
+    "findReferences": true,
+    "renameRefactoring": true,
+    "formatDocument": true,
+    "diagnostics": true,
+    "packageCompletion": true,
+    "snippets": true
+  },
+  "analysisOptions": {
+    "enableStrict": true,
+    "enableExperimentalFeatures": false,
+    "dartSdkPath": null,
+    "flutterPath": null
+  },
+  "completionSettings": {
+    "includeCommittedSuggestions": true,
+    "maxSuggestions": 100,
+    "completionDelay": 300
+  },
+  "formattingOptions": {
+    "lineLength": 80,
+    "indentSize": 2,
+    "useTabs": false
+  }
+}

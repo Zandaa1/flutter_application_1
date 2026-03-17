@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import '../utils/image_picker_helper.dart';
 
 class PostRideScreen extends StatefulWidget {
-  const PostRideScreen({Key? key}) : super(key: key);
+  const PostRideScreen({super.key});
 
   @override
   State<PostRideScreen> createState() => _PostRideScreenState();
@@ -14,6 +14,12 @@ class _PostRideScreenState extends State<PostRideScreen> {
   XFile? _odometerPhoto;
   XFile? _manifestPhoto;
   bool _locationConfirmed = false;
+
+  int get _completedCount =>
+      (_truckExteriorPhoto != null ? 1 : 0) +
+      (_odometerPhoto != null ? 1 : 0) +
+      (_manifestPhoto != null ? 1 : 0) +
+      (_locationConfirmed ? 1 : 0);
 
   bool get _allCompleted =>
       _truckExteriorPhoto != null &&
@@ -43,6 +49,8 @@ class _PostRideScreenState extends State<PostRideScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Post-Ride Check'),
@@ -64,6 +72,29 @@ class _PostRideScreenState extends State<PostRideScreen> {
                   Text(
                     'Complete all required checks before ending your trip',
                     style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: _completedCount / 4,
+                            minHeight: 10,
+                            backgroundColor: cs.surfaceContainerHighest,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '$_completedCount/4',
+                        style: tt.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -107,27 +138,19 @@ class _PostRideScreenState extends State<PostRideScreen> {
             },
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _allCompleted
-                ? () {
-                    // Navigate back and end ride
-                    Navigator.pop(context, true);
-                  }
-                : null,
+          FilledButton.icon(
+            onPressed: () {
+              // TODO: Validate photos/location before proceeding in production.
+              Navigator.pop(context, true);
+            },
             icon: const Icon(Icons.check_circle),
             label: const Text('Complete Post-Ride Check'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(16),
-              backgroundColor: _allCompleted ? Colors.green : null,
-            ),
           ),
           if (!_allCompleted) ...[
             const SizedBox(height: 12),
             Text(
               'Please complete all checks to end your ride',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.orange,
-                  ),
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ],
@@ -154,23 +177,25 @@ class _ChecklistItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
+        onTap: onTap,
         leading: CircleAvatar(
-          backgroundColor: isCompleted
-              ? Colors.green
-              : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-          child: Icon(
-            isCompleted ? Icons.check : icon,
-            color: isCompleted ? Colors.white : Theme.of(context).colorScheme.primary,
-          ),
+          backgroundColor: isCompleted ? cs.tertiary : cs.primaryContainer,
+          foregroundColor: isCompleted ? cs.onTertiary : cs.onPrimaryContainer,
+          child: Icon(isCompleted ? Icons.check_rounded : icon),
         ),
-        title: Text(title),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         subtitle: Text(subtitle),
-        trailing: ElevatedButton(
-          onPressed: onTap,
-          child: Text(isCompleted ? 'Change' : 'Upload'),
+        trailing: Icon(
+          isCompleted ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+          color: isCompleted ? cs.tertiary : cs.onSurfaceVariant,
+          size: 28,
         ),
       ),
     );

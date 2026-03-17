@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Request permissions as soon as login screen loads
     _requestPermissions();
     _loadDeviceId();
   }
@@ -34,23 +33,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _requestPermissions() async {
-    // Step 1: Request notification permission (Android 13+)
     await Permission.notification.request();
-    
-    // Step 2: Request camera permission
     await Permission.camera.request();
-    
-    // Step 3: Request location when in use permission
-    PermissionStatus locationStatus = await Permission.locationWhenInUse.request();
-    
+
+    PermissionStatus locationStatus = await Permission.locationWhenInUse
+        .request();
+
     if (locationStatus.isGranted) {
-      // Step 4: Request background location permission (Always Allow)
-      PermissionStatus backgroundStatus = await Permission.locationAlways.request();
-      
+      PermissionStatus backgroundStatus = await Permission.locationAlways
+          .request();
+
       if (!backgroundStatus.isGranted && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Background location permission is required for GPS tracking during rides'),
+            content: const Text(
+              'Background location permission is required for GPS tracking during rides',
+            ),
             action: SnackBarAction(
               label: 'Settings',
               onPressed: () {
@@ -74,7 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else if (locationStatus.isPermanentlyDenied && mounted) {
-      // User permanently denied permission, open settings
       await openAppSettings();
     }
   }
@@ -100,10 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
       deviceId = null;
     }
 
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     setState(() {
       _deviceId = deviceId;
     });
@@ -112,7 +106,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter username and password')),
+        const SnackBar(
+          content: Text('Please enter username and password'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
@@ -121,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // TODO: Implement actual login logic with API
+    await Future.delayed(const Duration(seconds: 1)); // Mock network delay
 
     setState(() {
       _isLoading = false;
@@ -134,121 +131,140 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
+      backgroundColor: cs.surface,
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(
-                Icons.local_shipping,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Fleet Driver App',
-                style: Theme.of(context).textTheme.headlineMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              TextField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // App Logo & Branding
+                Icon(
+                  Icons.local_shipping_rounded,
+                  size: 80,
+                  color: cs.primary,
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+                const SizedBox(height: 24),
+                Text(
+                  'Pututchini Logistics Driver',
+                  style: tt.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                    color: cs.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(16),
+                const SizedBox(height: 8),
+                Text(
+                  'Secure Internal Access',
+                  style: tt.bodyLarge?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Login'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Forgot Password?'),
-                      content: const Text(
-                        'Please contact your administrator to reset your password.',
-                        style: TextStyle(fontSize: 16),
+                const SizedBox(height: 48),
+
+                // Login Form
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                FilledButton(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text(
+                          'Secure Login',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Forgot Password?'),
+                        content: const Text(
+                          'Please contact dispatcher to reset your credentials. Device ID verification will be required.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('OK'),
+                          ),
+                        ],
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: const Text('Forgot Password?'),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Admin Only'),
-                      content: const Text(
-                        'This area is for admin testing only. Continue?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.pushNamed(context, '/admin-tools');
-                          },
-                          child: const Text('Continue'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.admin_panel_settings),
-                label: const Text('Admin Tools (GPS Test)'),
-              ),
-              const SizedBox(height: 48),
-              Text(
-                '© 2026 Fleet Management Inc. v1.0.0',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                'Device ID: ${_deviceId ?? 'Loading...'}',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
+                    );
+                  },
+                  child: const Text('Forgot Password?'),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/admin-tools');
+                  },
+                  icon: const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    size: 18,
+                  ),
+                  label: const Text('Admin Tools (Test Mode)'),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  '© 2026 Pututchini Logistics v2.0.0',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Device Identity: ${_deviceId ?? "Loading..."}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),

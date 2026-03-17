@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../utils/image_picker_helper.dart';
 import '../services/fuel_receipt_history_service.dart';
+import '../services/mock_backend_service.dart';
 
 class FuelReceiptScreen extends StatefulWidget {
-  const FuelReceiptScreen({Key? key}) : super(key: key);
+  const FuelReceiptScreen({super.key});
 
   @override
   State<FuelReceiptScreen> createState() => _FuelReceiptScreenState();
@@ -39,7 +41,7 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
 
   void _loadHistory() {
     setState(() {
-      _receiptHistory = FuelReceiptHistoryService.getHistoryForTrip(_tripId);
+      _receiptHistory = MockBackendService.getFuelReceiptsForTrip(_tripId);
     });
   }
 
@@ -85,27 +87,26 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
     }
 
     if (_receiptPhoto == null) {
+      // TODO: In production, require a photo. For testing we allow submission without one.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please upload receipt photo'),
+          content: Text('Note: No receipt photo attached (test mode)'),
+          duration: Duration(seconds: 2),
         ),
       );
-      return;
     }
 
     final total = double.parse(_totalPesosController.text);
     final pricePerLiter = double.parse(_pricePerLiterController.text);
     final liters = double.parse(_litersController.text);
 
-    FuelReceiptHistoryService.addReceipt(
+    final photoFile = File(_receiptPhoto!.path);
+    MockBackendService.addFuelReceipt(
       tripId: _tripId,
-      record: FuelReceiptRecord(
-        photoName: _receiptPhoto!.name,
-        totalPesos: total,
-        pricePerLiter: pricePerLiter,
-        liters: liters,
-        uploadedAt: DateTime.now(),
-      ),
+      photoFile: photoFile,
+      totalPesos: total,
+      pricePerLiter: pricePerLiter,
+      liters: liters,
     );
 
     _loadHistory();
@@ -127,6 +128,8 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Upload Fuel Receipt'),
@@ -164,23 +167,49 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
             
             // Receipt Photo Upload
             Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _receiptPhoto != null
-                      ? Colors.green
-                      : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  child: Icon(
-                    _receiptPhoto != null ? Icons.check : Icons.receipt,
-                    color: _receiptPhoto != null
-                        ? Colors.white
-                        : Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                title: const Text('Receipt Photo'),
-                subtitle: Text(_receiptPhoto != null ? 'Photo uploaded' : 'Take photo of receipt'),
-                trailing: ElevatedButton(
-                  onPressed: _pickImage,
-                  child: Text(_receiptPhoto != null ? 'Change' : 'Upload'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _receiptPhoto != null
+                          ? cs.tertiary
+                          : cs.primaryContainer,
+                      child: Icon(
+                        _receiptPhoto != null ? Icons.check : Icons.receipt,
+                        color: _receiptPhoto != null
+                            ? cs.onTertiary
+                            : cs.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Receipt Photo',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _receiptPhoto != null ? 'Photo uploaded' : 'Take photo of receipt',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton(
+                      onPressed: _pickImage,
+                      child: Text(_receiptPhoto != null ? 'Change' : 'Add'),
+                    )
+                  ],
                 ),
               ),
             ),
@@ -191,7 +220,6 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
               controller: _totalPesosController,
               decoration: const InputDecoration(
                 labelText: 'Total Amount (₱)',
-                border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.attach_money),
                 helperText: 'Total cost in Pesos',
               ),
@@ -217,7 +245,6 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
               controller: _pricePerLiterController,
               decoration: const InputDecoration(
                 labelText: 'Price Per Liter (₱)',
-                border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.local_gas_station),
                 helperText: 'Price per liter in Pesos',
               ),
@@ -243,7 +270,6 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
               controller: _litersController,
               decoration: const InputDecoration(
                 labelText: 'Liters',
-                border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.opacity),
                 helperText: 'Total liters purchased',
               ),
@@ -263,13 +289,10 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
             ),
             const SizedBox(height: 24),
             
-            ElevatedButton.icon(
+            FilledButton.icon(
               onPressed: _submitReceipt,
               icon: const Icon(Icons.check),
               label: const Text('Submit Receipt'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
             ),
             const SizedBox(height: 24),
             Card(
@@ -323,6 +346,11 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Tip: for safety, take the photo first, then fill the amounts while parked.',
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),

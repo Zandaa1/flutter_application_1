@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({Key? key}) : super(key: key);
+  const ChatScreen({super.key});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -41,6 +41,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat with Admin'),
@@ -64,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
+              color: cs.surface,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -73,19 +75,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message…',
+                      prefixIcon: const Icon(Icons.message_outlined),
                     ),
                     maxLines: null,
                     textInputAction: TextInputAction.send,
@@ -93,14 +91,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
+                SizedBox(
+                  height: 56,
+                  width: 56,
+                  child: FilledButton(
                     onPressed: _sendMessage,
+                    style: FilledButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: const CircleBorder(),
+                    ),
+                    child: const Icon(Icons.send_rounded),
                   ),
-                ),
+                )
               ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'Only send messages when safely parked.',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
             ),
           ),
         ],
@@ -116,18 +129,18 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Align(
       alignment: message.isAdmin ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: message.isAdmin
-              ? Colors.grey[300]
-              : Theme.of(context).colorScheme.primary,
+          color: message.isAdmin ? cs.surfaceContainerHighest : cs.primary,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -136,17 +149,18 @@ class _MessageBubble extends StatelessWidget {
             Text(
               message.text,
               style: TextStyle(
-                color: message.isAdmin ? Colors.black : Colors.white,
+                color: message.isAdmin ? cs.onSurface : cs.onPrimary,
+                fontSize: tt.bodyLarge?.fontSize,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               '${message.timestamp.hour}:${message.timestamp.minute.toString().padLeft(2, '0')}',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: message.isAdmin
-                    ? Colors.black54
-                    : Colors.white.withOpacity(0.7),
+                    ? cs.onSurfaceVariant
+                    : cs.onPrimary.withOpacity(0.8),
               ),
             ),
           ],

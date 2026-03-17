@@ -8,7 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import '../services/notification_test_service.dart';
 
 class AdminToolsScreen extends StatefulWidget {
-  const AdminToolsScreen({Key? key}) : super(key: key);
+  const AdminToolsScreen({super.key});
 
   @override
   State<AdminToolsScreen> createState() => _AdminToolsScreenState();
@@ -20,6 +20,7 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
   Position? _currentPosition;
   String? _error;
   bool _isStreaming = false;
+  bool _isStreamingLiveUpdate = false;
   StreamSubscription<Position>? _positionSubscription;
   String? _deviceId;
   String? _deviceModel;
@@ -222,6 +223,20 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
             setState(() {
               _currentPosition = position;
             });
+            if (_isStreamingLiveUpdate) {
+              // Calculate distance to Philippine Women's University Manila
+              // Lat: 14.5746, Lng: 120.9922
+              final distance = Geolocator.distanceBetween(
+                position.latitude,
+                position.longitude,
+                14.5746,
+                120.9922,
+              );
+              NotificationTestService.sendLiveUpdateNotification(
+                distanceMeters: distance,
+                destination: "Philippine Women's University Manila",
+              );
+            }
           },
           onError: (error) {
             if (!mounted) {
@@ -246,6 +261,7 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
 
   Future<void> _stopStreaming() async {
     await _positionSubscription?.cancel();
+    await NotificationTestService.cancelLiveUpdateNotification();
 
     if (!mounted) {
       return;
@@ -253,7 +269,27 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
 
     setState(() {
       _isStreaming = false;
+      _isStreamingLiveUpdate = false;
     });
+  }
+
+  Future<void> _startLiveUpdateTest() async {
+    setState(() {
+      _isStreamingLiveUpdate = true;
+    });
+    if (!_isStreaming) {
+      await _startStreaming();
+    }
+  }
+
+  Future<void> _stopLiveUpdateTest() async {
+    setState(() {
+      _isStreamingLiveUpdate = false;
+    });
+    await NotificationTestService.cancelLiveUpdateNotification();
+    if (_isStreaming) {
+      await _stopStreaming();
+    }
   }
 
   Future<void> _sendTestTripNotification() async {
@@ -295,6 +331,7 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final permissionLabel = _permissionLabel(_permission);
     final positionLabel = _positionLabel(_currentPosition);
     final isDeniedForever = _permission == LocationPermission.deniedForever;
@@ -365,8 +402,12 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
               label: const Text('Stop Live Updates'),
             ),
             const SizedBox(height: 12),
-            Text('Extra Button Tests',
-            style: Theme.of(context).textTheme.headlineSmall,),
+            Divider(color: cs.outlineVariant),
+            const SizedBox(height: 12),
+            Text(
+              'Extra Button Tests',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             Text(
               'This simulates the device mismatch error that occurs when a driver tries to log in on a different device than the one registered to their account.',
             ),
@@ -380,6 +421,18 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
               onPressed: _sendTestTripNotification,
               icon: const Icon(Icons.notifications_active),
               label: const Text('Send Test Trip Notification'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isStreamingLiveUpdate ? null : _startLiveUpdateTest,
+              icon: const Icon(Icons.directions_rounded),
+              label: const Text('Start PWU Route Live Update Test'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isStreamingLiveUpdate ? _stopLiveUpdateTest : null,
+              icon: const Icon(Icons.stop_rounded),
+              label: const Text('Stop Live Update Test'),
             ),
 
             if (isDeniedForever) ...[
