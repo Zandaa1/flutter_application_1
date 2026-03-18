@@ -32,7 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
     Ride(
       id: '2',
-      truckNumber: 'TRK-2025',
+      truckNumber: 'DEF-5678',
       destination: 'Cebu Distribution Center',
       destinationAddress: '456 Osmena Blvd, Cebu City',
       departureDate: DateTime.now().add(const Duration(days: 1)),
