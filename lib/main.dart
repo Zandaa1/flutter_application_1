@@ -47,7 +47,7 @@ void main() async {
       FlutterError.presentError(details);
     };
 
-    // Capture uncaught async errors.
+    // Capture uncaught async errors. test
     PlatformDispatcher.instance.onError = (error, stack) {
       // #region agent log
       unawaited(AgentDebugLog.log(
