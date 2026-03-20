@@ -1,5 +1,6 @@
 package com.example.flutter_application_1
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -8,38 +9,101 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private val nativeNotificationChannel = "fleet_driver/native_notifications"
+    private val trackingChannelId = "fleet_driver_tracking_alerts_v1"
+    private val trackingNotificationId = 888
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        
-        // Create notification channel for background service
+
+        // Create notification channel for background service.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                "fleet_driver_channel",
-                "Fleet Driver Background Service",
+                trackingChannelId,
+                "Ride Tracking Alerts",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows when Fleet Driver is running in the background"
-                // Make channel non-blockable to prevent users from turning it off
+                description = "Foreground ride tracking notifications and service status."
                 setBlockable(false)
-                // Prevent notification sound and vibration
                 setSound(null, null)
                 enableVibration(false)
-                // Lock screen visibility
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                // Show badge
-                setShowBadge(true)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setShowBadge(false)
             }
-            
+
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, nativeNotificationChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "updateTrackingProgress" -> {
+                        try {
+                            updateTrackingProgress(call)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("NATIVE_NOTIFY_ERROR", e.message, null)
+                        }
+                    }
+                    "clearTrackingProgress" -> {
+                        NotificationManagerCompat.from(this).cancel(trackingNotificationId)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         
         // Request battery optimization exclusion to ensure background service runs
         requestBatteryOptimizationExclusion()
+    }
+
+    private fun updateTrackingProgress(call: MethodCall) {
+        val title = call.argument<String>("title") ?: "Active Job - GPS Tracking"
+        val content = call.argument<String>("content") ?: "Tracking in progress"
+        val subText = call.argument<String>("subText") ?: "Arriving to destination"
+        val progress = (call.argument<Int>("progress") ?: 0).coerceIn(0, 100)
+        val indeterminate = call.argument<Boolean>("indeterminate") ?: false
+
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+        val contentIntent = launchIntent?.let {
+            android.app.PendingIntent.getActivity(
+                this,
+                0,
+                it,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val builder = NotificationCompat.Builder(this, trackingChannelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setSubText(subText)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setAutoCancel(false)
+            .setShowWhen(false)
+            .setProgress(100, progress, indeterminate)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+
+        if (contentIntent != null) {
+            builder.setContentIntent(contentIntent)
+        }
+
+        NotificationManagerCompat.from(this).notify(trackingNotificationId, builder.build())
     }
     
     private fun requestBatteryOptimizationExclusion() {

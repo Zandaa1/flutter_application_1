@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import '../services/background_service.dart';
+import '../services/mock_backend_service.dart';
 import '../models/ride.dart';
 import '../utils/agent_debug_log.dart';
 
@@ -48,13 +49,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
   void initState() {
     super.initState();
     // #region agent log
-    unawaited(AgentDebugLog.log(
-      location: 'active_ride_screen.dart:initState',
-      message: 'initState',
-      runId: 'pre-fix',
-      hypothesisId: 'H1',
-      data: {'mounted': mounted},
-    ));
+    unawaited(
+      AgentDebugLog.log(
+        location: 'active_ride_screen.dart:initState',
+        message: 'initState',
+        runId: 'pre-fix',
+        hypothesisId: 'H1',
+        data: {'mounted': mounted},
+      ),
+    );
     // #endregion
     // Blinking animation for GPS indicator
     _blinkController = AnimationController(
@@ -67,8 +70,8 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
       if (mounted && data != null) {
         setState(() {
           if (data['distanceMeters'] != null) {
-            _distanceToDestinationMeters =
-                (data['distanceMeters'] as num).toDouble();
+            _distanceToDestinationMeters = (data['distanceMeters'] as num)
+                .toDouble();
           }
         });
       }
@@ -97,22 +100,26 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
 
   Future<void> _startLocationTracking() async {
     // #region agent log
-    unawaited(AgentDebugLog.log(
-      location: 'active_ride_screen.dart:_startLocationTracking',
-      message: 'Start location tracking requested',
-      runId: 'pre-fix',
-      hypothesisId: 'H2',
-    ));
+    unawaited(
+      AgentDebugLog.log(
+        location: 'active_ride_screen.dart:_startLocationTracking',
+        message: 'Start location tracking requested',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+      ),
+    );
     // #endregion
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       // #region agent log
-      unawaited(AgentDebugLog.log(
-        location: 'active_ride_screen.dart:_startLocationTracking',
-        message: 'Location services disabled',
-        runId: 'pre-fix',
-        hypothesisId: 'H2',
-      ));
+      unawaited(
+        AgentDebugLog.log(
+          location: 'active_ride_screen.dart:_startLocationTracking',
+          message: 'Location services disabled',
+          runId: 'pre-fix',
+          hypothesisId: 'H2',
+        ),
+      );
       // #endregion
       return;
     }
@@ -125,13 +132,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       // #region agent log
-      unawaited(AgentDebugLog.log(
-        location: 'active_ride_screen.dart:_startLocationTracking',
-        message: 'Location permission not granted',
-        runId: 'pre-fix',
-        hypothesisId: 'H2',
-        data: {'permission': permission.toString()},
-      ));
+      unawaited(
+        AgentDebugLog.log(
+          location: 'active_ride_screen.dart:_startLocationTracking',
+          message: 'Location permission not granted',
+          runId: 'pre-fix',
+          hypothesisId: 'H2',
+          data: {'permission': permission.toString()},
+        ),
+      );
       // #endregion
       return;
     }
@@ -143,33 +152,38 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
             accuracy: LocationAccuracy.high,
             distanceFilter: 10,
           ),
-        ).listen((position) {
-          if (!mounted) {
-            return;
-          }
-          final dist = Geolocator.distanceBetween(
-            position.latitude,
-            position.longitude,
-            _destinationLat,
-            _destinationLng,
-          );
-          setState(() {
-            _currentPosition = position;
-            _lastUpdatedAt = DateTime.now();
-            _distanceToDestinationMeters = dist;
-            _initialDistanceMeters ??= dist;
-          });
-        }, onError: (error) {
-          // #region agent log
-          unawaited(AgentDebugLog.log(
-            location: 'active_ride_screen.dart:_startLocationTracking',
-            message: 'Position stream error',
-            runId: 'pre-fix',
-            hypothesisId: 'H2',
-            data: {'error': error.toString()},
-          ));
-          // #endregion
-        });
+        ).listen(
+          (position) {
+            if (!mounted) {
+              return;
+            }
+            final dist = Geolocator.distanceBetween(
+              position.latitude,
+              position.longitude,
+              _destinationLat,
+              _destinationLng,
+            );
+            setState(() {
+              _currentPosition = position;
+              _lastUpdatedAt = DateTime.now();
+              _distanceToDestinationMeters = dist;
+              _initialDistanceMeters ??= dist;
+            });
+          },
+          onError: (error) {
+            // #region agent log
+            unawaited(
+              AgentDebugLog.log(
+                location: 'active_ride_screen.dart:_startLocationTracking',
+                message: 'Position stream error',
+                runId: 'pre-fix',
+                hypothesisId: 'H2',
+                data: {'error': error.toString()},
+              ),
+            );
+            // #endregion
+          },
+        );
   }
 
   Future<void> _stopLocationTracking() async {
@@ -179,13 +193,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
 
   Future<void> _openGoogleMaps() async {
     // #region agent log
-    unawaited(AgentDebugLog.log(
-      location: 'active_ride_screen.dart:_openGoogleMaps',
-      message: 'Open maps requested',
-      runId: 'pre-fix',
-      hypothesisId: 'H3',
-      data: {'lat': _destinationLat, 'lng': _destinationLng},
-    ));
+    unawaited(
+      AgentDebugLog.log(
+        location: 'active_ride_screen.dart:_openGoogleMaps',
+        message: 'Open maps requested',
+        runId: 'pre-fix',
+        hypothesisId: 'H3',
+        data: {'lat': _destinationLat, 'lng': _destinationLng},
+      ),
+    );
     // #endregion
     try {
       await MapsLauncher.launchCoordinates(
@@ -195,13 +211,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
       );
     } catch (e) {
       // #region agent log
-      unawaited(AgentDebugLog.log(
-        location: 'active_ride_screen.dart:_openGoogleMaps',
-        message: 'Maps launcher threw',
-        runId: 'pre-fix',
-        hypothesisId: 'H3',
-        data: {'error': e.toString()},
-      ));
+      unawaited(
+        AgentDebugLog.log(
+          location: 'active_ride_screen.dart:_openGoogleMaps',
+          message: 'Maps launcher threw',
+          runId: 'pre-fix',
+          hypothesisId: 'H3',
+          data: {'error': e.toString()},
+        ),
+      );
       // #endregion
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -215,12 +233,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
 
   Future<void> _startRide() async {
     // #region agent log
-    unawaited(AgentDebugLog.log(
-      location: 'active_ride_screen.dart:_startRide',
-      message: 'Start ride tapped',
-      runId: 'pre-fix',
-      hypothesisId: 'H4',
-    ));
+    unawaited(
+      AgentDebugLog.log(
+        location: 'active_ride_screen.dart:_startRide',
+        message: 'Start ride tapped',
+        runId: 'pre-fix',
+        hypothesisId: 'H4',
+      ),
+    );
     // #endregion
 
     // 1. Start the background foreground service (shows persistent non-dismissable notification).
@@ -237,6 +257,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
         _destinationLat,
         _destinationLng,
         _currentRide.destination,
+      );
+      await MockBackendService.setActiveRide(
+        isActive: true,
+        updatedBy: 'driver_active_ride_screen',
+        tripId: _currentRide.id,
+        destinationName: _currentRide.destination,
+        destinationLat: _destinationLat,
+        destinationLng: _destinationLng,
       );
     }
 
@@ -261,7 +289,10 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Emergency Alert', style: TextStyle(color: Colors.red)),
+        title: const Text(
+          'Emergency Alert',
+          style: TextStyle(color: Colors.red),
+        ),
         content: const Text(
           'This will send an emergency notification to the admin. Use only in case of accidents, vehicle issues, or urgent situations.\n\nDo you want to continue?',
         ),
@@ -270,7 +301,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-// Get colors carefully matching the error context natively.
+          // Get colors carefully matching the error context natively.
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
@@ -297,12 +328,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
 
   Future<void> _endRide() async {
     // #region agent log
-    unawaited(AgentDebugLog.log(
-      location: 'active_ride_screen.dart:_endRide',
-      message: 'End ride tapped',
-      runId: 'pre-fix',
-      hypothesisId: 'H5',
-    ));
+    unawaited(
+      AgentDebugLog.log(
+        location: 'active_ride_screen.dart:_endRide',
+        message: 'End ride tapped',
+        runId: 'pre-fix',
+        hypothesisId: 'H5',
+      ),
+    );
     // #endregion
     // Navigate to post-ride check screen
     final result = await Navigator.pushNamed(context, '/post-ride');
@@ -311,6 +344,10 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     if (result == true) {
       // Stop background service and cancel the persistent notification.
       await BackgroundService.stopService();
+      await MockBackendService.setActiveRide(
+        isActive: false,
+        updatedBy: 'driver_active_ride_screen',
+      );
       await _stopLocationTracking();
 
       setState(() {
@@ -333,16 +370,18 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     // #region agent log
-    unawaited(AgentDebugLog.log(
-      location: 'active_ride_screen.dart:build',
-      message: 'build',
-      runId: 'pre-fix',
-      hypothesisId: 'H1',
-      data: {
-        'isRideActive': _isRideActive,
-        'hasPosition': _currentPosition != null,
-      },
-    ));
+    unawaited(
+      AgentDebugLog.log(
+        location: 'active_ride_screen.dart:build',
+        message: 'build',
+        runId: 'pre-fix',
+        hypothesisId: 'H1',
+        data: {
+          'isRideActive': _isRideActive,
+          'hasPosition': _currentPosition != null,
+        },
+      ),
+    );
     // #endregion
     final currentLocationLabel = _currentPosition == null
         ? 'Getting GPS location…'
@@ -351,15 +390,17 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     final lastUpdatedLabel = _lastUpdatedAt == null
         ? 'Last updated: --'
         : 'Last updated: ${DateFormat('hh:mm a').format(_lastUpdatedAt!)}';
-    final isArrived = _distanceToDestinationMeters != null && _distanceToDestinationMeters! <= 250;
-    
+    final isArrived =
+        _distanceToDestinationMeters != null &&
+        _distanceToDestinationMeters! <= 250;
+
     final distanceLabel = _distanceToDestinationMeters == null
         ? 'Calculating…'
         : isArrived
-            ? "You're here!"
-            : _distanceToDestinationMeters! >= 1000
-                ? '${(_distanceToDestinationMeters! / 1000).toStringAsFixed(1)} km to destination'
-                : '${_distanceToDestinationMeters!.toStringAsFixed(0)} m to destination';
+        ? "You're here!"
+        : _distanceToDestinationMeters! >= 1000
+        ? '${(_distanceToDestinationMeters! / 1000).toStringAsFixed(1)} km to destination'
+        : '${_distanceToDestinationMeters!.toStringAsFixed(0)} m to destination';
 
     return Scaffold(
       appBar: AppBar(
@@ -534,7 +575,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                                 if (isArrived) ...[
@@ -542,7 +585,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                                   Text(
                                     'You can now complete the job.',
                                     style: TextStyle(
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
@@ -561,15 +606,17 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
-                              value: (_initialDistanceMeters! -
-                                          _distanceToDestinationMeters!) /
-                                      _initialDistanceMeters!
-                                          .clamp(1.0, double.infinity),
+                              value:
+                                  (_initialDistanceMeters! -
+                                      _distanceToDestinationMeters!) /
+                                  _initialDistanceMeters!.clamp(
+                                    1.0,
+                                    double.infinity,
+                                  ),
                               minHeight: 8,
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.2),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.2),
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
@@ -808,7 +855,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                             ],
                           ),
                         ),
-                      ],    
+                      ],
                     ),
                   ),
                 ),
@@ -857,7 +904,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                     ListTile(
                       leading: const Icon(Icons.camera_alt),
                       title: const Text('Post-Trip Photos'),
-                      subtitle: const Text('Upload delivery, condition, incidents'),
+                      subtitle: const Text(
+                        'Upload delivery, condition, incidents',
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () =>
                           Navigator.pushNamed(context, '/post-trip-photos'),

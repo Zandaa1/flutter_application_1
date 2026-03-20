@@ -5,6 +5,9 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
+import '../services/background_service.dart';
+import '../services/mock_backend_service.dart';
 import '../services/notification_test_service.dart';
 
 class AdminToolsScreen extends StatefulWidget {
@@ -21,6 +24,8 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
   String? _error;
   bool _isStreaming = false;
   bool _isStreamingLiveUpdate = false;
+  bool _isMockActiveRideNotificationRunning = false;
+  Map<String, Object?> _activeRideState = const <String, Object?>{};
   StreamSubscription<Position>? _positionSubscription;
   String? _deviceId;
   String? _deviceModel;
@@ -29,6 +34,7 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
   void initState() {
     super.initState();
     _refreshStatus();
+    _refreshActiveRideState();
     _loadDeviceInfo();
   }
 
@@ -49,6 +55,17 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     setState(() {
       _serviceEnabled = serviceEnabled;
       _permission = permission;
+    });
+  }
+
+  Future<void> _refreshActiveRideState() async {
+    final activeRide = await MockBackendService.getActiveRide();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _activeRideState = activeRide;
+      _isMockActiveRideNotificationRunning = activeRide['isActive'] == true;
     });
   }
 
@@ -310,10 +327,111 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Improved test trip notification sent')),
+    );
+  }
+
+  Future<void> _startMockActiveRideNotification() async {
+    const destinationLat = 14.5995;
+    const destinationLng = 120.9842;
+    const destinationName = 'Manila Warehouse';
+
+    final started = await BackgroundService.startService();
+    if (!started) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to start active ride mock notification'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    BackgroundService.sendDestination(
+      destinationLat,
+      destinationLng,
+      destinationName,
+    );
+    await MockBackendService.setActiveRide(
+      isActive: true,
+      updatedBy: 'admin_tools_mock',
+      tripId: 'mock-admin-ride',
+      destinationName: destinationName,
+      destinationLat: destinationLat,
+      destinationLng: destinationLng,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isMockActiveRideNotificationRunning = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Improved test trip notification sent'),
+        content: Text(
+          'Active ride mock notification started (tracking to Manila Warehouse)',
+        ),
+        backgroundColor: Colors.green,
       ),
     );
+  }
+
+  Future<void> _stopMockActiveRideNotification() async {
+    final stopped = await BackgroundService.stopService();
+    await MockBackendService.setActiveRide(
+      isActive: false,
+      updatedBy: 'admin_tools_mock',
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isMockActiveRideNotificationRunning = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          stopped
+              ? 'Active ride mock notification stopped'
+              : 'No active ride mock notification was running',
+        ),
+      ),
+    );
+  }
+
+  String _activeRideSummary() {
+    if (_activeRideState.isEmpty || _activeRideState['isActive'] != true) {
+      return 'No active ride in mock backend';
+    }
+
+    final destination =
+        (_activeRideState['destinationName'] as String?) ??
+        'Unknown destination';
+    final lat = (_activeRideState['lastLat'] as num?)?.toDouble();
+    final lng = (_activeRideState['lastLng'] as num?)?.toDouble();
+    final updatedAtRaw = _activeRideState['lastUpdatedAt'] as String?;
+    final updatedAt = updatedAtRaw == null
+        ? null
+        : DateTime.tryParse(updatedAtRaw);
+    final updatedBy = (_activeRideState['updatedBy'] as String?) ?? 'unknown';
+
+    final locationText = (lat == null || lng == null)
+        ? 'Last location: waiting for first GPS ping'
+        : 'Last location: ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}';
+    final timeText = updatedAt == null
+        ? 'Updated: --'
+        : 'Updated: ${DateFormat('hh:mm:ss a').format(updatedAt.toLocal())}';
+
+    return 'Active mock ride → $destination\n$locationText\n$timeText\nSource: $updatedBy';
   }
 
   String _permissionLabel(LocationPermission? permission) {
@@ -447,6 +565,43 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
               onPressed: _isStreamingLiveUpdate ? _stopLiveUpdateTest : null,
               icon: const Icon(Icons.stop_rounded),
               label: const Text('Stop Live Update Test'),
+            ),
+            const SizedBox(height: 12),
+            Divider(color: cs.outlineVariant),
+            const SizedBox(height: 12),
+            Text(
+              'Active Ride Notification Mock',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            Text(
+              'Mimics the active ride foreground tracking notification status/location flow.',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _activeRideSummary(),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isMockActiveRideNotificationRunning
+                  ? null
+                  : _startMockActiveRideNotification,
+              icon: const Icon(Icons.local_shipping_rounded),
+              label: const Text('Start Active Ride Mock Notification'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _isMockActiveRideNotificationRunning
+                  ? _stopMockActiveRideNotification
+                  : null,
+              icon: const Icon(Icons.stop_circle_outlined),
+              label: const Text('Stop Active Ride Mock Notification'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _refreshActiveRideState,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh Active Ride Mock State'),
             ),
 
             if (isDeniedForever) ...[

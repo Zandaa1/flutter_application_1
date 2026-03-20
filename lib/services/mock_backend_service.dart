@@ -21,12 +21,12 @@ class TollExpenseRecord {
   });
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'expresswayOrLocation': expresswayOrLocation,
-        'amountPesos': amountPesos,
-        'receiptFileName': receiptFileName,
-        'uploadedAt': uploadedAt.toIso8601String(),
-      };
+    'id': id,
+    'expresswayOrLocation': expresswayOrLocation,
+    'amountPesos': amountPesos,
+    'receiptFileName': receiptFileName,
+    'uploadedAt': uploadedAt.toIso8601String(),
+  };
 
   static TollExpenseRecord fromJson(Map<String, Object?> json) {
     return TollExpenseRecord(
@@ -34,7 +34,8 @@ class TollExpenseRecord {
       expresswayOrLocation: (json['expresswayOrLocation'] as String?) ?? '',
       amountPesos: (json['amountPesos'] as num?)?.toDouble() ?? 0,
       receiptFileName: (json['receiptFileName'] as String?) ?? '',
-      uploadedAt: DateTime.tryParse((json['uploadedAt'] as String?) ?? '') ??
+      uploadedAt:
+          DateTime.tryParse((json['uploadedAt'] as String?) ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -54,11 +55,11 @@ class LocationPing {
   });
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'lat': lat,
-        'lng': lng,
-        'accuracyMeters': accuracyMeters,
-        'at': at.toIso8601String(),
-      };
+    'lat': lat,
+    'lng': lng,
+    'accuracyMeters': accuracyMeters,
+    'at': at.toIso8601String(),
+  };
 }
 
 class MockBackendService {
@@ -72,6 +73,18 @@ class MockBackendService {
     'postTripPhotos': <Object?>[],
     'locationPings': <Object?>[],
     'preRideSubmissions': <Object?>[],
+    'activeRide': <String, Object?>{
+      'isActive': false,
+      'tripId': null,
+      'destinationName': null,
+      'destinationLat': null,
+      'destinationLng': null,
+      'lastLat': null,
+      'lastLng': null,
+      'lastAccuracyMeters': null,
+      'lastUpdatedAt': null,
+      'updatedBy': null,
+    },
   };
 
   static Future<void> initialize() async {
@@ -81,8 +94,9 @@ class MockBackendService {
     if (!await dbDir.exists()) {
       await dbDir.create(recursive: true);
     }
-    final uploadsDir =
-        Directory('${dbDir.path}${Platform.pathSeparator}uploads');
+    final uploadsDir = Directory(
+      '${dbDir.path}${Platform.pathSeparator}uploads',
+    );
     if (!await uploadsDir.exists()) {
       await uploadsDir.create(recursive: true);
     }
@@ -114,8 +128,9 @@ class MockBackendService {
   static String _id() => DateTime.now().microsecondsSinceEpoch.toString();
 
   static Future<String> _copyIntoUploads(File source) async {
-    final uploadsDir =
-        Directory('${_dbFile.parent.path}${Platform.pathSeparator}uploads');
+    final uploadsDir = Directory(
+      '${_dbFile.parent.path}${Platform.pathSeparator}uploads',
+    );
     final ext = source.path.contains('.') ? source.path.split('.').last : 'jpg';
     final fileName = 'upload_${_id()}.$ext';
     final dest = File('${uploadsDir.path}${Platform.pathSeparator}$fileName');
@@ -136,7 +151,8 @@ class MockBackendService {
     final odomFile = await _copyIntoUploads(odometerPhoto);
     final manifestFile = await _copyIntoUploads(manifestPhoto);
     final fuelFile = await _copyIntoUploads(fuelDetailsPhoto);
-    final list = (_db['preRideSubmissions'] as List?)?.cast<Object?>() ?? <Object?>[];
+    final list =
+        (_db['preRideSubmissions'] as List?)?.cast<Object?>() ?? <Object?>[];
     list.add(<String, Object?>{
       'id': _id(),
       'tripId': tripId,
@@ -181,7 +197,8 @@ class MockBackendService {
       uploadedAt: DateTime.now(),
     );
 
-    final root = (_db['fuelReceiptsByTrip'] as Map?)?.cast<String, Object?>() ??
+    final root =
+        (_db['fuelReceiptsByTrip'] as Map?)?.cast<String, Object?>() ??
         <String, Object?>{};
     final list = (root[tripId] as List?)?.cast<Object?>() ?? <Object?>[];
     list.add(record.toJson());
@@ -226,6 +243,7 @@ class MockBackendService {
 
   // ---- Location pings ----
   static Future<void> addLocationPing(LocationPing ping) async {
+    await initialize();
     final list =
         (_db['locationPings'] as List?)?.cast<Object?>() ?? <Object?>[];
     list.add(ping.toJson());
@@ -234,7 +252,70 @@ class MockBackendService {
     if (list.length > 200) {
       _db['locationPings'] = list.sublist(list.length - 200);
     }
+
+    final activeRide =
+        (_db['activeRide'] as Map?)?.cast<String, Object?>() ??
+        <String, Object?>{};
+    final isActive = activeRide['isActive'] == true;
+    if (isActive) {
+      activeRide['lastLat'] = ping.lat;
+      activeRide['lastLng'] = ping.lng;
+      activeRide['lastAccuracyMeters'] = ping.accuracyMeters;
+      activeRide['lastUpdatedAt'] = ping.at.toIso8601String();
+      if ((activeRide['updatedBy'] as String?) == null) {
+        activeRide['updatedBy'] = 'background_service';
+      }
+      _db['activeRide'] = activeRide;
+    }
+
     await _persist();
   }
-}
 
+  static Future<void> setActiveRide({
+    required bool isActive,
+    required String updatedBy,
+    String? tripId,
+    String? destinationName,
+    double? destinationLat,
+    double? destinationLng,
+  }) async {
+    await initialize();
+    final activeRide =
+        (_db['activeRide'] as Map?)?.cast<String, Object?>() ??
+        <String, Object?>{};
+
+    activeRide['isActive'] = isActive;
+    activeRide['updatedBy'] = updatedBy;
+    activeRide['lastUpdatedAt'] = DateTime.now().toIso8601String();
+
+    if (tripId != null) {
+      activeRide['tripId'] = tripId;
+    }
+    if (destinationName != null) {
+      activeRide['destinationName'] = destinationName;
+    }
+    if (destinationLat != null) {
+      activeRide['destinationLat'] = destinationLat;
+    }
+    if (destinationLng != null) {
+      activeRide['destinationLng'] = destinationLng;
+    }
+
+    if (!isActive) {
+      activeRide['lastLat'] = null;
+      activeRide['lastLng'] = null;
+      activeRide['lastAccuracyMeters'] = null;
+    }
+
+    _db['activeRide'] = activeRide;
+    await _persist();
+  }
+
+  static Future<Map<String, Object?>> getActiveRide() async {
+    await initialize();
+    final activeRide =
+        (_db['activeRide'] as Map?)?.cast<String, Object?>() ??
+        <String, Object?>{};
+    return Map<String, Object?>.from(activeRide);
+  }
+}

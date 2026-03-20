@@ -1,17 +1,32 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'mock_backend_service.dart';
-import 'notification_test_service.dart';
 
 @pragma('vm:entry-point')
 class BackgroundService {
   static const String trackingNotificationChannelId =
       'fleet_driver_tracking_alerts_v1';
   static const int trackingNotificationId = 888;
+  static const MethodChannel _nativeNotificationsChannel = MethodChannel(
+    'fleet_driver/native_notifications',
+  );
+
+  static Future<void> _setForegroundInfo(
+    dynamic androidService, {
+    required String content,
+  }) async {
+    try {
+      await androidService.setForegroundNotificationInfo(
+        title: 'Active Job - GPS Tracking',
+        content: content,
+      );
+    } catch (_) {}
+  }
 
   @pragma('vm:entry-point')
   static Future<void> initializeService() async {
@@ -30,7 +45,8 @@ class BackgroundService {
         autoStartOnBoot: false,
         notificationChannelId: trackingNotificationChannelId,
         initialNotificationTitle: 'Active Job — GPS Tracking',
-        initialNotificationContent: 'Tracking is running. Cannot be dismissed while job is active.',
+        initialNotificationContent:
+            'Tracking is running. Cannot be dismissed while job is active.',
         foregroundServiceNotificationId: trackingNotificationId,
       ),
     );
@@ -61,12 +77,14 @@ class BackgroundService {
     });
   }
 
-@pragma('vm:entry-point')
-  
+  @pragma('vm:entry-point')
   static Future<bool> stopService() async {
     final service = FlutterBackgroundService();
     bool isRunning = await service.isRunning();
     if (isRunning) {
+      try {
+        await _nativeNotificationsChannel.invokeMethod('clearTrackingProgress');
+      } catch (_) {}
       service.invoke('stop');
       return true;
     }
@@ -84,24 +102,29 @@ class BackgroundService {
   static void onStart(ServiceInstance service) async {
     WidgetsFlutterBinding.ensureInitialized();
     DartPluginRegistrant.ensureInitialized();
+    final isAndroidService = service.runtimeType.toString().contains('Android');
+    final dynamic androidService = isAndroidService ? service as dynamic : null;
 
     // Destination coords and name — updated via 'setDestination' invoke from UI.
     double? destLat;
     double? destLng;
     String destName = 'destination';
+    double? initialDistanceMeters;
 
     // Only android-specific setup
-    if (service.runtimeType.toString().contains('Android')) {
-      final androidService = service as dynamic;
-      
+    if (isAndroidService) {
       // Immediately set as foreground - this creates the initial ongoing notification
       try {
         await androidService.setAsForegroundService();
+        await _setForegroundInfo(
+          androidService,
+          content: 'Tracking is running. Preparing route...',
+        );
         print('Service set as foreground successfully');
       } catch (e) {
         print('Error setting foreground: $e');
       }
-      
+
       service.on('setAsForeground').listen((event) async {
         await androidService.setAsForegroundService();
       });
@@ -118,6 +141,13 @@ class BackgroundService {
         destLat = (event['destLat'] as num?)?.toDouble();
         destLng = (event['destLng'] as num?)?.toDouble();
         destName = (event['destName'] as String?) ?? 'destination';
+        initialDistanceMeters = null;
+        if (isAndroidService) {
+          _setForegroundInfo(
+            androidService,
+            content: 'Tracking route to $destName...',
+          );
+        }
         print('Destination set: $destLat, $destLng ($destName)');
       }
     });
@@ -128,8 +158,7 @@ class BackgroundService {
 
     // Background GPS tracking timer — updates every 60 seconds.
     Timer.periodic(const Duration(seconds: 60), (timer) async {
-      if (service.runtimeType.toString().contains('Android')) {
-        final androidService = service as dynamic;
+      if (isAndroidService) {
         try {
           bool isForeground = await androidService.isForegroundService();
           if (!isForeground) {
@@ -197,38 +226,51 @@ class BackgroundService {
       }
 
       // Update the persistent notification using the live update format.
-      if (service.runtimeType.toString().contains('Android')) {
-        final androidService = service as dynamic;
+      if (isAndroidService) {
         if (distMeters != null) {
-          // Use the NotificationTestService to show a progress-bar notification
+          initialDistanceMeters ??= distMeters > 1 ? distMeters : 1;
+          var progress =
+              ((initialDistanceMeters! - distMeters) / initialDistanceMeters!) *
+              100;
+          if (progress < 0) progress = 0;
+          if (progress > 100) progress = 100;
+
+          final subText = distMeters <= 250
+              ? 'Arrived at $destName'
+              : 'Arriving to $destName';
+
+          final progressContent = distMeters <= 250
+              ? 'You can now complete the job.'
+              : (distMeters >= 1000
+                    ? '${(distMeters / 1000).toStringAsFixed(1)} km remaining'
+                    : '${distMeters.toStringAsFixed(0)} m remaining');
           try {
-            await NotificationTestService.sendLiveUpdateNotification(
-              distanceMeters: distMeters,
-              destination: destName,
-            );
+            await _nativeNotificationsChannel
+                .invokeMethod('updateTrackingProgress', {
+                  'title': 'Active Job - GPS Tracking',
+                  'content': progressContent,
+                  'subText': subText,
+                  'progress': progress.round(),
+                  'indeterminate': false,
+                });
           } catch (e) {
-            // Fallback to plain text if NotificationTestService fails in isolate
-            try {
-              await androidService.setForegroundNotificationInfo(
-                title: 'Active Job — GPS Tracking',
-                content: notifContent,
-              );
-            } catch (_) {}
+            print('Native progress update failed: $e');
           }
+          await _setForegroundInfo(androidService, content: progressContent);
         } else {
           try {
-            await NotificationTestService.sendIndeterminateLiveUpdateNotification(
-              content: notifContent,
-              destination: destName,
-            );
+            await _nativeNotificationsChannel
+                .invokeMethod('updateTrackingProgress', {
+                  'title': 'Active Job - GPS Tracking',
+                  'content': notifContent,
+                  'subText': 'Arriving to $destName',
+                  'progress': 0,
+                  'indeterminate': true,
+                });
           } catch (e) {
-            try {
-              await androidService.setForegroundNotificationInfo(
-                title: 'Active Job — GPS Tracking',
-                content: notifContent,
-              );
-            } catch (_) {}
+            print('Native indeterminate update failed: $e');
           }
+          await _setForegroundInfo(androidService, content: notifContent);
         }
       }
 
@@ -239,7 +281,7 @@ class BackgroundService {
         if (pos != null) 'lat': pos.latitude,
         if (pos != null) 'lng': pos.longitude,
         if (pos != null) 'accuracy': pos.accuracy,
-        if (distMeters != null) 'distanceMeters': distMeters,
+        'distanceMeters': distMeters,
       });
     });
   }
