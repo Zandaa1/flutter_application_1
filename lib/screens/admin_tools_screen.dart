@@ -299,6 +299,20 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     await NotificationTestService.sendTripAssignedNotification(
       tripDate: testTripDate,
       destination: testDestination,
+      truckNumber: 'TRK-2025',
+      tripCode: 'TEST-TRIP-001',
+      eta: '12:00 PM',
+      testMode: true,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Improved test trip notification sent'),
+      ),
     );
   }
 

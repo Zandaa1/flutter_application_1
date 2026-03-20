@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
@@ -8,18 +10,24 @@ class NotificationTestService {
   static const String _channelName = 'Trip Assignment Alerts';
   static const String _channelDescription =
       'Important notifications when a new trip is assigned.';
+  static const int _testTripNotificationId = 770001;
   static const String _trackingChannelName = 'Ride Tracking Alerts';
   static const String _trackingChannelDescription =
       'Foreground ride tracking notifications and service status.';
-  static const String _liveChannelId = 'live_update_channel';
-  static const String _liveChannelName = 'Live Updates';
-  static const String _liveChannelDescription =
-      'Continuous updates for distance or status.';
 
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
+  static const Duration _minLiveUpdateInterval = Duration(seconds: 20);
+  static const double _minDistanceDeltaMeters = 25;
+  static const int _progressMax = 1000;
+
+  static DateTime? _lastLiveUpdateAt;
+  static double? _lastLiveDistanceMeters;
+  static bool? _lastLiveArrivedState;
+  static DateTime? _lastIndeterminateUpdateAt;
+  static String? _lastIndeterminateContent;
 
   static Future<void> initialize() async {
     if (_initialized || kIsWeb) {
@@ -61,36 +69,15 @@ class NotificationTestService {
       ),
     );
 
-    await androidPlugin?.createNotificationChannel(
-      const AndroidNotificationChannel(
-        _liveChannelId,
-        _liveChannelName,
-        description: _liveChannelDescription,
-        importance: Importance.low,
-        playSound: false,
-        enableVibration: false,
-      ),
-    );
-
     await androidPlugin?.requestNotificationsPermission();
 
     _initialized = true;
   }
 
-  static Future<void> sendTripAssignedNotification({
-    required DateTime tripDate,
-    required String destination,
-  }) async {
-    await initialize();
-
-    if (kIsWeb) {
-      return;
-    }
-
-    final dateLabel = DateFormat('MMM dd, yyyy').format(tripDate);
-    final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-    const androidDetails = AndroidNotificationDetails(
+  static NotificationDetails _tripAssignedDetails({
+    required String expandedText,
+  }) {
+    final androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,
       channelDescription: _channelDescription,
@@ -99,30 +86,23 @@ class NotificationTestService {
       playSound: false,
       enableVibration: true,
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.message,
+      category: AndroidNotificationCategory.transport,
+      ticker: 'New trip assignment',
+      styleInformation: BigTextStyleInformation(
+        expandedText,
+        contentTitle: 'Trip Ready for Dispatch',
+        summaryText: 'Open app to review and accept',
+      ),
     );
 
-    await _notificationsPlugin.show(
-      notificationId,
-      'New Trip Assignment',
-      'You have received a trip.\nDate: $dateLabel\nDestination: $destination',
-      const NotificationDetails(android: androidDetails),
-    );
+    return NotificationDetails(android: androidDetails);
   }
 
-  /// The initial distance captured at ride start, used to calculate progress.
-  static double? _initialDistance;
-
-  /// Fires the ride notification as a live update with a progress bar.
-  /// Called once when the ride starts, and then on each GPS update.
-  static Future<void> sendRideStartedNotification({
-    required String destination,
-    required String truckNumber,
-  }) async {
-    await initialize();
-    if (kIsWeb) return;
-
-    // Initial notification — indeterminate progress while waiting for GPS
+  static NotificationDetails _trackingDetails({
+    required String subText,
+    required bool indeterminate,
+    required int progress,
+  }) {
     final androidDetails = AndroidNotificationDetails(
       BackgroundService.trackingNotificationChannelId,
       _trackingChannelName,
@@ -136,20 +116,95 @@ class NotificationTestService {
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.service,
       showWhen: false,
-      subText: 'Arriving to $destination',
+      onlyAlertOnce: true,
+      additionalFlags: Int32List.fromList(<int>[32]),
+      subText: subText,
       showProgress: true,
-      maxProgress: 1000,
-      progress: 0,
-      indeterminate: true,
+      maxProgress: _progressMax,
+      progress: progress,
+      indeterminate: indeterminate,
     );
 
-    _initialDistance = null; // Reset progress for new ride
+    return NotificationDetails(android: androidDetails);
+  }
+
+  static Future<void> sendTripAssignedNotification({
+    required DateTime tripDate,
+    required String destination,
+    String? truckNumber,
+    String? tripCode,
+    String? eta,
+    bool testMode = false,
+  }) async {
+    await initialize();
+
+    if (kIsWeb) {
+      return;
+    }
+
+    final dateLabel = DateFormat('MMM dd, yyyy').format(tripDate);
+    final dayLabel = DateFormat('EEEE').format(tripDate);
+    final tripLabel = (tripCode == null || tripCode.trim().isEmpty)
+        ? 'N/A'
+        : tripCode.trim();
+    final truckLabel = (truckNumber == null || truckNumber.trim().isEmpty)
+        ? 'Unassigned'
+        : truckNumber.trim();
+    final etaLabel = (eta == null || eta.trim().isEmpty)
+        ? 'Pending from dispatch'
+        : eta.trim();
+
+    final body = StringBuffer()
+      ..writeln('Destination: $destination')
+      ..writeln('Trip date: $dayLabel, $dateLabel')
+      ..writeln('Truck: $truckLabel')
+      ..writeln('Trip code: $tripLabel')
+      ..write('ETA: $etaLabel');
+
+    final notificationId = testMode
+        ? _testTripNotificationId
+        : DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final title = testMode ? 'Test Trip Assignment' : 'New Trip Assignment';
+
+    await _notificationsPlugin.show(
+      notificationId,
+      title,
+      'Destination: $destination',
+      _tripAssignedDetails(expandedText: body.toString()),
+    );
+  }
+
+  /// The initial distance captured at ride start, used to calculate progress.
+  static double? _initialDistance;
+
+  static void _resetLiveUpdateState() {
+    _initialDistance = null;
+    _lastLiveUpdateAt = null;
+    _lastLiveDistanceMeters = null;
+    _lastLiveArrivedState = null;
+    _lastIndeterminateUpdateAt = null;
+    _lastIndeterminateContent = null;
+  }
+
+  /// Fires the ride notification as a live update with a progress bar.
+  /// Called once when the ride starts, and then on each GPS update.
+  static Future<void> sendRideStartedNotification({
+    required String destination,
+  }) async {
+    await initialize();
+    if (kIsWeb) return;
+
+    _resetLiveUpdateState();
 
     await _notificationsPlugin.show(
       BackgroundService.trackingNotificationId,
-      'Active Job — Truck $truckNumber',
+      'Active Job - GPS Tracking',
       'Calculating route...',
-      NotificationDetails(android: androidDetails),
+      _trackingDetails(
+        subText: 'Arriving to $destination',
+        indeterminate: true,
+        progress: 0,
+      ),
     );
   }
 
@@ -166,6 +221,7 @@ class NotificationTestService {
       _initialDistance = distanceMeters > 0 ? distanceMeters : 1;
     }
 
+    final now = DateTime.now();
     final distanceStr = distanceMeters >= 1000
         ? '${(distanceMeters / 1000).toStringAsFixed(1)} km'
         : '${distanceMeters.toStringAsFixed(0)} m';
@@ -174,36 +230,44 @@ class NotificationTestService {
     if (progress < 0) progress = 0;
     if (progress > 1) progress = 1;
 
-    bool isArrived = distanceMeters <= 250;
+    final isArrived = distanceMeters <= 250;
+    final elapsed = _lastLiveUpdateAt == null
+        ? _minLiveUpdateInterval
+        : now.difference(_lastLiveUpdateAt!);
+    final distanceDelta = _lastLiveDistanceMeters == null
+        ? _minDistanceDeltaMeters
+        : (distanceMeters - _lastLiveDistanceMeters!).abs();
+    final stateChanged = _lastLiveArrivedState != isArrived;
+    final shouldEmit =
+        stateChanged ||
+        elapsed >= _minLiveUpdateInterval ||
+        distanceDelta >= _minDistanceDeltaMeters;
 
-    final androidDetails = AndroidNotificationDetails(
-      BackgroundService.trackingNotificationChannelId,
-      _trackingChannelName,
-      channelDescription: _trackingChannelDescription,
-      importance: Importance.low,
-      priority: Priority.low,
-      ongoing: true,
-      autoCancel: false,
-      playSound: false,
-      enableVibration: false,
-      visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.service,
-      showWhen: false,
-      subText: isArrived
-          ? 'Arrived at $destination'
-          : 'Arriving to $destination',
-      showProgress: true,
-      maxProgress: 1000,
-      progress: (progress * 1000).toInt(),
-      indeterminate: false,
-    );
+    if (!shouldEmit) {
+      return;
+    }
+
+    final subText = isArrived
+        ? 'Arrived at $destination'
+        : 'Arriving to $destination';
+    final progressValue = (progress * _progressMax).toInt();
 
     await _notificationsPlugin.show(
       BackgroundService.trackingNotificationId,
-      isArrived ? "You're here!" : 'Active Job',
+      'Active Job - GPS Tracking',
       isArrived ? 'You can now complete the job.' : '$distanceStr remaining',
-      NotificationDetails(android: androidDetails),
+      _trackingDetails(
+        subText: subText,
+        indeterminate: false,
+        progress: progressValue,
+      ),
     );
+
+    _lastLiveUpdateAt = now;
+    _lastLiveDistanceMeters = distanceMeters;
+    _lastLiveArrivedState = isArrived;
+    _lastIndeterminateContent = null;
+    _lastIndeterminateUpdateAt = null;
   }
 
   /// Updates the live notification when GPS is waiting or distance is unknown.
@@ -214,38 +278,37 @@ class NotificationTestService {
     await initialize();
     if (kIsWeb) return;
 
-    final androidDetails = AndroidNotificationDetails(
-      BackgroundService.trackingNotificationChannelId,
-      _trackingChannelName,
-      channelDescription: _trackingChannelDescription,
-      importance: Importance.low,
-      priority: Priority.low,
-      ongoing: true,
-      autoCancel: false,
-      playSound: false,
-      enableVibration: false,
-      visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.service,
-      showWhen: false,
-      subText: 'Arriving to $destination',
-      showProgress: true,
-      maxProgress: 1000,
-      progress: 0,
-      indeterminate: true,
-    );
+    final now = DateTime.now();
+    final elapsed = _lastIndeterminateUpdateAt == null
+        ? _minLiveUpdateInterval
+        : now.difference(_lastIndeterminateUpdateAt!);
+    final isDifferentContent = _lastIndeterminateContent != content;
+    if (!isDifferentContent && elapsed < _minLiveUpdateInterval) {
+      return;
+    }
 
     await _notificationsPlugin.show(
       BackgroundService.trackingNotificationId,
-      'Active Job',
+      'Active Job - GPS Tracking',
       content,
-      NotificationDetails(android: androidDetails),
+      _trackingDetails(
+        subText: 'Arriving to $destination',
+        indeterminate: true,
+        progress: 0,
+      ),
     );
+
+    _lastIndeterminateUpdateAt = now;
+    _lastIndeterminateContent = content;
+    _lastLiveUpdateAt = null;
+    _lastLiveDistanceMeters = null;
+    _lastLiveArrivedState = null;
   }
 
   /// Cancels the ride notification (call when ride ends).
   static Future<void> cancelRideNotification() async {
     if (kIsWeb) return;
-    _initialDistance = null;
+    _resetLiveUpdateState();
     await _notificationsPlugin.cancel(BackgroundService.trackingNotificationId);
   }
 

@@ -5,7 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import '../services/background_service.dart';
-import '../services/notification_test_service.dart';
 import '../models/ride.dart';
 import '../utils/agent_debug_log.dart';
 
@@ -239,11 +238,6 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
         _destinationLng,
         _currentRide.destination,
       );
-      // Pre-fire the indeterminate progress bar layout until GPS gives us distance
-      NotificationTestService.sendRideStartedNotification(
-        destination: _currentRide.destination,
-        truckNumber: _currentRide.truckNumber,
-      );
     }
 
     // 3. Activate the ride UI and start the in-app GPS stream.
@@ -317,7 +311,6 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     if (result == true) {
       // Stop background service and cancel the persistent notification.
       await BackgroundService.stopService();
-      await NotificationTestService.cancelRideNotification();
       await _stopLocationTracking();
 
       setState(() {
