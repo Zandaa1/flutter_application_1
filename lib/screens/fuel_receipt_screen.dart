@@ -73,7 +73,7 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
         _pricePerLiterController.text.isNotEmpty) {
       final total = double.tryParse(_totalPesosController.text);
       final pricePerLiter = double.tryParse(_pricePerLiterController.text);
-      
+
       if (total != null && pricePerLiter != null && pricePerLiter > 0) {
         final liters = total / pricePerLiter;
         _litersController.text = liters.toStringAsFixed(2);
@@ -131,9 +131,7 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Upload Fuel Receipt'),
-      ),
+      appBar: AppBar(title: const Text('Fuel')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -164,11 +162,14 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Receipt Photo Upload
             Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
+                ),
                 child: Row(
                   children: [
                     CircleAvatar(
@@ -196,7 +197,9 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _receiptPhoto != null ? 'Photo uploaded' : 'Take photo of receipt',
+                            _receiptPhoto != null
+                                ? 'Photo uploaded'
+                                : 'Take photo of receipt',
                             style: TextStyle(
                               fontSize: 14,
                               color: cs.onSurfaceVariant,
@@ -208,20 +211,19 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                     FilledButton(
                       onPressed: _pickImage,
                       child: Text(_receiptPhoto != null ? 'Change' : 'Add'),
-                    )
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Total Amount
             TextFormField(
               controller: _totalPesosController,
               decoration: const InputDecoration(
                 labelText: 'Total Amount (₱)',
                 prefixIcon: Icon(Icons.attach_money),
-                helperText: 'Total cost in Pesos',
               ),
               keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -239,14 +241,13 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Price Per Liter
             TextFormField(
               controller: _pricePerLiterController,
               decoration: const InputDecoration(
                 labelText: 'Price Per Liter (₱)',
                 prefixIcon: Icon(Icons.local_gas_station),
-                helperText: 'Price per liter in Pesos',
               ),
               keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -264,14 +265,13 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Liters
             TextFormField(
               controller: _litersController,
               decoration: const InputDecoration(
                 labelText: 'Liters',
                 prefixIcon: Icon(Icons.opacity),
-                helperText: 'Total liters purchased',
               ),
               keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -287,8 +287,13 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Tip: For your safety, only fill the details while parked.',
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
             const SizedBox(height: 24),
-            
+
             FilledButton.icon(
               onPressed: _submitReceipt,
               icon: const Icon(Icons.check),
@@ -304,8 +309,8 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                     Text(
                       'Fuel Receipt History',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -313,10 +318,20 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 12),
                     if (_receiptHistory.isEmpty)
-                      Text(
-                        'No receipts uploaded for this trip yet.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'No receipts uploaded for this trip yet. Don\'t forget to submit your fuel receipts to keep track of your expenses! ',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
                       )
                     else
                       ..._receiptHistory.map((record) {
@@ -327,7 +342,9 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                             leading: const CircleAvatar(
                               child: Icon(Icons.receipt_long),
                             ),
-                            title: Text('P${record.totalPesos.toStringAsFixed(2)}'),
+                            title: Text(
+                              'P${record.totalPesos.toStringAsFixed(2)}',
+                            ),
                             subtitle: Text(
                               '${record.photoName}\n'
                               '${record.liters.toStringAsFixed(2)} L @ P${record.pricePerLiter.toStringAsFixed(2)} /L',
@@ -346,11 +363,6 @@ class _FuelReceiptScreenState extends State<FuelReceiptScreen> {
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Tip: for safety, take the photo first, then fill the amounts while parked.',
-              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),

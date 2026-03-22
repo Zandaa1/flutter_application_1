@@ -10,7 +10,6 @@ import 'screens/fuel_receipt_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/admin_tools_screen.dart';
 import 'screens/add_toll_screen.dart';
-import 'screens/post_trip_photos_screen.dart';
 import 'services/background_service.dart';
 import 'services/notification_test_service.dart';
 import 'services/mock_backend_service.dart';
@@ -114,7 +113,6 @@ class FleetDriverApp extends StatelessWidget {
             '/chat': (context) => const ChatScreen(),
             '/admin-tools': (context) => const AdminToolsScreen(),
             '/add-toll': (context) => const AddTollScreen(),
-            '/post-trip-photos': (context) => const PostTripPhotosScreen(),
           },
         );
       },

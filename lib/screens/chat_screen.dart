@@ -45,7 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final tt = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat with Admin'),
+        title: const Text('Chat'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),

@@ -15,6 +15,26 @@ class BackgroundService {
   static const MethodChannel _nativeNotificationsChannel = MethodChannel(
     'fleet_driver/native_notifications',
   );
+  static bool _nativeNotificationsAvailable = true;
+
+  static Future<void> _invokeNativeNotification(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    if (!_nativeNotificationsAvailable) {
+      return;
+    }
+    try {
+      await _nativeNotificationsChannel.invokeMethod(method, arguments);
+    } on MissingPluginException catch (e) {
+      _nativeNotificationsAvailable = false;
+      debugPrint(
+        'Native notifications unavailable in this isolate: ${e.message}',
+      );
+    } on PlatformException catch (e) {
+      debugPrint('Native notification call failed ($method): ${e.message}');
+    }
+  }
 
   static double _distanceMeters(
     double lat1,
@@ -117,9 +137,7 @@ class BackgroundService {
     final service = FlutterBackgroundService();
     bool isRunning = await service.isRunning();
     if (isRunning) {
-      try {
-        await _nativeNotificationsChannel.invokeMethod('clearTrackingProgress');
-      } catch (_) {}
+      await _invokeNativeNotification('clearTrackingProgress');
       service.invoke('stop');
       return true;
     }
@@ -197,30 +215,22 @@ class BackgroundService {
               : (distMeters >= 1000
                     ? '${(distMeters / 1000).toStringAsFixed(1)} km remaining • ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}'
                     : '${distMeters.toStringAsFixed(0)} m remaining • ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}');
-          try {
-            await _nativeNotificationsChannel.invokeMethod('updateTrackingProgress', {
-              'title': 'Active Job - GPS Tracking',
-              'content': progressContent,
-              'subText': subText,
-              'progress': progress.round(),
-              'indeterminate': false,
-            });
-          } catch (e) {
-            print('Native progress update failed: $e');
-          }
+          await _invokeNativeNotification('updateTrackingProgress', {
+            'title': 'Active Job - GPS Tracking',
+            'content': progressContent,
+            'subText': subText,
+            'progress': progress.round(),
+            'indeterminate': false,
+          });
           await _setForegroundInfo(androidService, content: progressContent);
         } else {
-          try {
-            await _nativeNotificationsChannel.invokeMethod('updateTrackingProgress', {
-              'title': 'Active Job - GPS Tracking',
-              'content': notifContent,
-              'subText': 'Arriving to $destName',
-              'progress': 0,
-              'indeterminate': true,
-            });
-          } catch (e) {
-            print('Native indeterminate update failed: $e');
-          }
+          await _invokeNativeNotification('updateTrackingProgress', {
+            'title': 'Active Job - GPS Tracking',
+            'content': notifContent,
+            'subText': 'Arriving to $destName',
+            'progress': 0,
+            'indeterminate': true,
+          });
           await _setForegroundInfo(androidService, content: notifContent);
         }
       }

@@ -615,7 +615,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                                 if (isArrived) ...[
                                   const SizedBox(height: 4),
                                   Text(
-                                    'You can now complete the job.',
+                                    "You can now complete the job. Don't forget to upload the required documents.",
                                     style: TextStyle(
                                       color: Theme.of(
                                         context,
@@ -933,17 +933,6 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
               Card(
                 child: Column(
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.camera_alt),
-                      title: const Text('Post-Trip Photos'),
-                      subtitle: const Text(
-                        'Upload delivery, condition, incidents',
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () =>
-                          Navigator.pushNamed(context, '/post-trip-photos'),
-                    ),
-                    const Divider(height: 0),
                     ListTile(
                       leading: const Icon(Icons.receipt_long),
                       title: const Text('Fuel Receipts'),
