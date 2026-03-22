@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import '../services/background_service.dart';
 import '../services/mock_backend_service.dart';
+import '../services/notification_test_service.dart';
 import '../models/ride.dart';
 import '../utils/agent_debug_log.dart';
 
@@ -30,6 +31,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
   // TODO: Replace with actual ride data from route arguments
   final Ride _currentRide = Ride(
     id: '1',
+    jobId: 'JOB-2024-001',
     truckNumber: 'TRK-2025',
     destination: 'Manila Warehouse',
     destinationAddress: '123 Rizal Avenue, Manila',
@@ -169,6 +171,22 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
               _distanceToDestinationMeters = dist;
               _initialDistanceMeters ??= dist;
             });
+            if (_isRideActive) {
+              BackgroundService.sendLocationUpdate(
+                lat: position.latitude,
+                lng: position.longitude,
+                accuracyMeters: position.accuracy,
+                at: DateTime.now(),
+              );
+              unawaited(
+                NotificationTestService.sendLiveUpdateNotification(
+                  distanceMeters: dist,
+                  destination: _currentRide.destination,
+                  currentLat: position.latitude,
+                  currentLng: position.longitude,
+                ),
+              );
+            }
           },
           onError: (error) {
             // #region agent log
@@ -250,6 +268,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     //    truly non-dismissable notification.
     //    TODO: Re-enable permission gate for production:
     //    final ok = await PermissionGuard.ensureActiveRideReady(context); if (!ok) return;
+    await NotificationTestService.sendRideStartedNotification(
+      destination: _currentRide.destination,
+    );
     final started = await BackgroundService.startService();
     if (started) {
       // 2. Send destination so notification shows distance immediately.
@@ -258,15 +279,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
         _destinationLng,
         _currentRide.destination,
       );
-      await MockBackendService.setActiveRide(
-        isActive: true,
-        updatedBy: 'driver_active_ride_screen',
-        tripId: _currentRide.id,
-        destinationName: _currentRide.destination,
-        destinationLat: _destinationLat,
-        destinationLng: _destinationLng,
-      );
     }
+    await MockBackendService.setActiveRide(
+      isActive: true,
+      updatedBy: 'driver_active_ride_screen',
+      tripId: _currentRide.id,
+      destinationName: _currentRide.destination,
+      destinationLat: _destinationLat,
+      destinationLng: _destinationLng,
+    );
 
     // 3. Activate the ride UI and start the in-app GPS stream.
     setState(() {
@@ -344,6 +365,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
     if (result == true) {
       // Stop background service and cancel the persistent notification.
       await BackgroundService.stopService();
+      await NotificationTestService.cancelLiveUpdateNotification();
       await MockBackendService.setActiveRide(
         isActive: false,
         updatedBy: 'driver_active_ride_screen',
@@ -442,7 +464,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'GPS ACTIVE',
+                      'GPS',
                       style: TextStyle(
                         color: cs.onTertiary,
                         fontWeight: FontWeight.bold,
@@ -459,6 +481,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          
           children: [
             // Route Info Card
             if (_isRideActive) ...[
@@ -491,6 +514,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen>
                         label: 'Truck',
                         value: _currentRide.truckNumber,
                       ),
+                      if (_currentRide.jobId != null &&
+                          _currentRide.jobId!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _RouteInfoRow(
+                          icon: Icons.badge_outlined,
+                          label: 'Job ID',
+                          value: _currentRide.jobId!,
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       _RouteInfoRow(
                         icon: Icons.location_on,

@@ -1,5 +1,6 @@
 class Ride {
   final String id;
+  final String? jobId;
   final String truckNumber;
   final String destination;
   final String destinationAddress;
@@ -12,6 +13,7 @@ class Ride {
 
   Ride({
     required this.id,
+    this.jobId,
     required this.truckNumber,
     required this.destination,
     required this.destinationAddress,

@@ -212,6 +212,8 @@ class NotificationTestService {
   static Future<void> sendLiveUpdateNotification({
     required double distanceMeters,
     required String destination,
+    double? currentLat,
+    double? currentLng,
   }) async {
     await initialize();
     if (kIsWeb) return;
@@ -250,12 +252,17 @@ class NotificationTestService {
     final subText = isArrived
         ? 'Arrived at $destination'
         : 'Arriving to $destination';
+    final locationSuffix = (currentLat == null || currentLng == null)
+        ? ''
+        : ' • ${currentLat.toStringAsFixed(4)}, ${currentLng.toStringAsFixed(4)}';
     final progressValue = (progress * _progressMax).toInt();
 
     await _notificationsPlugin.show(
       BackgroundService.trackingNotificationId,
       'Active Job - GPS Tracking',
-      isArrived ? 'You can now complete the job.' : '$distanceStr remaining',
+      isArrived
+          ? 'You can now complete the job.$locationSuffix'
+          : '$distanceStr remaining$locationSuffix',
       _trackingDetails(
         subText: subText,
         indeterminate: false,

@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:geolocator/geolocator.dart';
 
 import 'mock_backend_service.dart';
 
@@ -15,6 +15,25 @@ class BackgroundService {
   static const MethodChannel _nativeNotificationsChannel = MethodChannel(
     'fleet_driver/native_notifications',
   );
+
+  static double _distanceMeters(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const earthRadiusMeters = 6371000.0;
+    final dLat = (lat2 - lat1) * math.pi / 180.0;
+    final dLng = (lng2 - lng1) * math.pi / 180.0;
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180.0) *
+            math.cos(lat2 * math.pi / 180.0) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadiusMeters * c;
+  }
 
   static Future<void> _setForegroundInfo(
     dynamic androidService, {
@@ -44,9 +63,9 @@ class BackgroundService {
         autoStart: false,
         autoStartOnBoot: false,
         notificationChannelId: trackingNotificationChannelId,
-        initialNotificationTitle: 'Active Job — GPS Tracking',
+        initialNotificationTitle: 'Active Job — GPS Active',
         initialNotificationContent:
-            'Tracking is running. Cannot be dismissed while job is active.',
+            'Tracking is running. Do not turn off the app for tracking purposes.',
         foregroundServiceNotificationId: trackingNotificationId,
       ),
     );
@@ -74,6 +93,22 @@ class BackgroundService {
       'destLat': destLat,
       'destLng': destLng,
       'destName': destName,
+    });
+  }
+
+  /// Send latest foreground location to background service for notification updates.
+  static void sendLocationUpdate({
+    required double lat,
+    required double lng,
+    double? accuracyMeters,
+    DateTime? at,
+  }) {
+    final service = FlutterBackgroundService();
+    service.invoke('locationUpdate', {
+      'lat': lat,
+      'lng': lng,
+      'accuracy': accuracyMeters,
+      'at': (at ?? DateTime.now()).toIso8601String(),
     });
   }
 
@@ -110,6 +145,96 @@ class BackgroundService {
     double? destLng;
     String destName = 'destination';
     double? initialDistanceMeters;
+    double? currentLat;
+    double? currentLng;
+    double? currentAccuracy;
+    DateTime? currentAt;
+
+    Future<void> pushTrackingUpdate() async {
+      double? distMeters;
+      if (currentLat != null &&
+          currentLng != null &&
+          destLat != null &&
+          destLng != null) {
+        distMeters = _distanceMeters(currentLat!, currentLng!, destLat!, destLng!);
+      }
+
+      final now = DateTime.now();
+      final timeStr =
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+      String notifContent;
+      if (currentLat == null || currentLng == null) {
+        notifContent = 'Waiting for GPS signal…  •  $timeStr';
+      } else {
+        final coordStr =
+            'Lat ${currentLat!.toStringAsFixed(4)}, Lng ${currentLng!.toStringAsFixed(4)}';
+        if (distMeters != null) {
+          final distStr = distMeters >= 1000
+              ? '${(distMeters / 1000).toStringAsFixed(1)} km remaining'
+              : '${distMeters.toStringAsFixed(0)} m remaining';
+          notifContent = '$distStr  •  $coordStr  •  $timeStr';
+        } else {
+          notifContent = '$coordStr  •  Updated $timeStr';
+        }
+      }
+
+      if (isAndroidService) {
+        if (distMeters != null) {
+          initialDistanceMeters ??= distMeters > 1 ? distMeters : 1;
+          var progress =
+              ((initialDistanceMeters! - distMeters) / initialDistanceMeters!) *
+              100;
+          if (progress < 0) progress = 0;
+          if (progress > 100) progress = 100;
+
+          final subText = distMeters <= 250
+              ? 'Arrived at $destName'
+              : 'Arriving to $destName';
+
+          final progressContent = distMeters <= 250
+              ? 'You can now complete the job. ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)} Dont forget to submit Post-Ride Images.'
+              : (distMeters >= 1000
+                    ? '${(distMeters / 1000).toStringAsFixed(1)} km remaining • ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}'
+                    : '${distMeters.toStringAsFixed(0)} m remaining • ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}');
+          try {
+            await _nativeNotificationsChannel.invokeMethod('updateTrackingProgress', {
+              'title': 'Active Job - GPS Tracking',
+              'content': progressContent,
+              'subText': subText,
+              'progress': progress.round(),
+              'indeterminate': false,
+            });
+          } catch (e) {
+            print('Native progress update failed: $e');
+          }
+          await _setForegroundInfo(androidService, content: progressContent);
+        } else {
+          try {
+            await _nativeNotificationsChannel.invokeMethod('updateTrackingProgress', {
+              'title': 'Active Job - GPS Tracking',
+              'content': notifContent,
+              'subText': 'Arriving to $destName',
+              'progress': 0,
+              'indeterminate': true,
+            });
+          } catch (e) {
+            print('Native indeterminate update failed: $e');
+          }
+          await _setForegroundInfo(androidService, content: notifContent);
+        }
+      }
+
+      service.invoke('update', {
+        'current_date': DateTime.now().toIso8601String(),
+        'status': 'tracking',
+        if (currentLat != null) 'lat': currentLat,
+        if (currentLng != null) 'lng': currentLng,
+        if (currentAccuracy != null) 'accuracy': currentAccuracy,
+        if (currentAt != null) 'locationAt': currentAt!.toIso8601String(),
+        'distanceMeters': distMeters,
+      });
+    }
 
     // Only android-specific setup
     if (isAndroidService) {
@@ -149,14 +274,44 @@ class BackgroundService {
           );
         }
         print('Destination set: $destLat, $destLng ($destName)');
+        unawaited(pushTrackingUpdate());
       }
+    });
+
+    service.on('locationUpdate').listen((event) async {
+      if (event == null) {
+        return;
+      }
+      final lat = (event['lat'] as num?)?.toDouble();
+      final lng = (event['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) {
+        return;
+      }
+
+      currentLat = lat;
+      currentLng = lng;
+      currentAccuracy = (event['accuracy'] as num?)?.toDouble();
+      final atRaw = event['at'] as String?;
+      currentAt = DateTime.tryParse(atRaw ?? '') ?? DateTime.now();
+
+      await MockBackendService.initialize();
+      await MockBackendService.addLocationPing(
+        LocationPing(
+          lat: lat,
+          lng: lng,
+          accuracyMeters: currentAccuracy,
+          at: currentAt!,
+        ),
+      );
+
+      await pushTrackingUpdate();
     });
 
     service.on('stop').listen((event) {
       service.stopSelf();
     });
 
-    // Background GPS tracking timer — updates every 60 seconds.
+    // Keep foreground-service state healthy and emit periodic heartbeat updates.
     Timer.periodic(const Duration(seconds: 60), (timer) async {
       if (isAndroidService) {
         try {
@@ -169,120 +324,7 @@ class BackgroundService {
           print('Error in service loop: $e');
         }
       }
-
-      Position? pos;
-      try {
-        pos = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-          ),
-        );
-      } catch (e) {
-        // ignore - permission/service issues will be handled in UI gate
-      }
-
-      if (pos != null) {
-        await MockBackendService.initialize();
-        await MockBackendService.addLocationPing(
-          LocationPing(
-            lat: pos.latitude,
-            lng: pos.longitude,
-            accuracyMeters: pos.accuracy,
-            at: DateTime.now(),
-          ),
-        );
-      }
-
-      // Compute distance to destination if we have both positions.
-      double? distMeters;
-      if (pos != null && destLat != null && destLng != null) {
-        distMeters = Geolocator.distanceBetween(
-          pos.latitude,
-          pos.longitude,
-          destLat!,
-          destLng!,
-        );
-      }
-
-      // Build the notification content line.
-      final now = DateTime.now();
-      final timeStr =
-          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-      String notifContent;
-      if (pos == null) {
-        notifContent = 'Waiting for GPS signal…  •  $timeStr';
-      } else {
-        final coordStr =
-            'Lat ${pos.latitude.toStringAsFixed(4)}, Lng ${pos.longitude.toStringAsFixed(4)}';
-        if (distMeters != null) {
-          final distStr = distMeters >= 1000
-              ? '${(distMeters / 1000).toStringAsFixed(1)} km remaining'
-              : '${distMeters.toStringAsFixed(0)} m remaining';
-          notifContent = '$distStr  •  $coordStr  •  $timeStr';
-        } else {
-          notifContent = '$coordStr  •  Updated $timeStr';
-        }
-      }
-
-      // Update the persistent notification using the live update format.
-      if (isAndroidService) {
-        if (distMeters != null) {
-          initialDistanceMeters ??= distMeters > 1 ? distMeters : 1;
-          var progress =
-              ((initialDistanceMeters! - distMeters) / initialDistanceMeters!) *
-              100;
-          if (progress < 0) progress = 0;
-          if (progress > 100) progress = 100;
-
-          final subText = distMeters <= 250
-              ? 'Arrived at $destName'
-              : 'Arriving to $destName';
-
-          final progressContent = distMeters <= 250
-              ? 'You can now complete the job.'
-              : (distMeters >= 1000
-                    ? '${(distMeters / 1000).toStringAsFixed(1)} km remaining'
-                    : '${distMeters.toStringAsFixed(0)} m remaining');
-          try {
-            await _nativeNotificationsChannel
-                .invokeMethod('updateTrackingProgress', {
-                  'title': 'Active Job - GPS Tracking',
-                  'content': progressContent,
-                  'subText': subText,
-                  'progress': progress.round(),
-                  'indeterminate': false,
-                });
-          } catch (e) {
-            print('Native progress update failed: $e');
-          }
-          await _setForegroundInfo(androidService, content: progressContent);
-        } else {
-          try {
-            await _nativeNotificationsChannel
-                .invokeMethod('updateTrackingProgress', {
-                  'title': 'Active Job - GPS Tracking',
-                  'content': notifContent,
-                  'subText': 'Arriving to $destName',
-                  'progress': 0,
-                  'indeterminate': true,
-                });
-          } catch (e) {
-            print('Native indeterminate update failed: $e');
-          }
-          await _setForegroundInfo(androidService, content: notifContent);
-        }
-      }
-
-      // Send data back to UI (distance included so the screen can display it).
-      service.invoke('update', {
-        'current_date': DateTime.now().toIso8601String(),
-        'status': 'tracking',
-        if (pos != null) 'lat': pos.latitude,
-        if (pos != null) 'lng': pos.longitude,
-        if (pos != null) 'accuracy': pos.accuracy,
-        'distanceMeters': distMeters,
-      });
+      await pushTrackingUpdate();
     });
   }
 

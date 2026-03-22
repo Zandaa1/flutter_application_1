@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Pututchini Logistics Driver',
+                  'Driver App',
                   style: tt.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: -0.5,
@@ -162,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Secure Internal Access',
+                  'FOR INTERNAL USE ONLY',
                   style: tt.bodyLarge?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  '© 2026 Pututchini Logistics v2.0.0',
+                  '© 2026 Pututchini Logistics Design Test v2.0.1',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,

@@ -240,19 +240,57 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
             setState(() {
               _currentPosition = position;
             });
-            if (_isStreamingLiveUpdate) {
-              // Calculate distance to Philippine Women's University Manila
-              // Lat: 14.5746, Lng: 120.9922
-              final distance = Geolocator.distanceBetween(
+            if (_isStreamingLiveUpdate || _isMockActiveRideNotificationRunning) {
+              final destination = _isMockActiveRideNotificationRunning
+                  ? 'Manila Warehouse'
+                  : "Philippine Women's University Manila";
+              final destinationLat = _isMockActiveRideNotificationRunning
+                  ? 14.5995
+                  : 14.5746;
+              final destinationLng = _isMockActiveRideNotificationRunning
+                  ? 120.9842
+                  : 120.9922;
+              final routeDistance = Geolocator.distanceBetween(
                 position.latitude,
                 position.longitude,
-                14.5746,
-                120.9922,
+                destinationLat,
+                destinationLng,
               );
               NotificationTestService.sendLiveUpdateNotification(
-                distanceMeters: distance,
-                destination: "Philippine Women's University Manila",
+                distanceMeters: routeDistance,
+                destination: destination,
+                currentLat: position.latitude,
+                currentLng: position.longitude,
               );
+            }
+            if (_isMockActiveRideNotificationRunning) {
+              BackgroundService.sendLocationUpdate(
+                lat: position.latitude,
+                lng: position.longitude,
+                accuracyMeters: position.accuracy,
+                at: DateTime.now(),
+              );
+              unawaited(
+                MockBackendService.setActiveRide(
+                  isActive: true,
+                  updatedBy: 'admin_tools_mock',
+                  tripId: 'mock-admin-ride',
+                  destinationName: 'Manila Warehouse',
+                  destinationLat: 14.5995,
+                  destinationLng: 120.9842,
+                ),
+              );
+              unawaited(
+                MockBackendService.addLocationPing(
+                  LocationPing(
+                    lat: position.latitude,
+                    lng: position.longitude,
+                    accuracyMeters: position.accuracy,
+                    at: DateTime.now(),
+                  ),
+                ),
+              );
+              unawaited(_refreshActiveRideState());
             }
           },
           onError: (error) {
@@ -355,6 +393,9 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
       destinationLng,
       destinationName,
     );
+    await NotificationTestService.sendRideStartedNotification(
+      destination: destinationName,
+    );
     await MockBackendService.setActiveRide(
       isActive: true,
       updatedBy: 'admin_tools_mock',
@@ -371,6 +412,11 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     setState(() {
       _isMockActiveRideNotificationRunning = true;
     });
+    await _startStreaming();
+    await _refreshActiveRideState();
+    if (!mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -384,6 +430,7 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
 
   Future<void> _stopMockActiveRideNotification() async {
     final stopped = await BackgroundService.stopService();
+    await NotificationTestService.cancelLiveUpdateNotification();
     await MockBackendService.setActiveRide(
       isActive: false,
       updatedBy: 'admin_tools_mock',
@@ -396,6 +443,10 @@ class _AdminToolsScreenState extends State<AdminToolsScreen> {
     setState(() {
       _isMockActiveRideNotificationRunning = false;
     });
+    await _refreshActiveRideState();
+    if (!mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

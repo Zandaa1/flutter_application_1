@@ -111,7 +111,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'Only send messages when safely parked.',
+                'Make sure you are parked first to avoid accidents.',
                 style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
             ),

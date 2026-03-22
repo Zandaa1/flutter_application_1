@@ -14,7 +14,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _showUpcoming = true;
   bool _showPast = false;
 
-  final String _driverName = "John";
+  final String _driverName = "Alexander Reyes";
 
   final List<Ride> _rides = [
     Ride(
@@ -29,6 +29,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       status: RideStatus.current,
       remarks:
           'Priority delivery - Handle with care. Contact warehouse manager upon arrival.',
+      jobId: 'JOB-2024-001',
+
     ),
     Ride(
       id: '2',
@@ -41,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       expectedArrival: '02:00 PM',
       status: RideStatus.upcoming,
       remarks: 'Fragile items on board. Avoid rough roads if possible.',
+      jobId: 'JOB-2024-002',
     ),
     Ride(
       id: '3',
@@ -52,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       expectedDeparture: '07:30 AM',
       expectedArrival: '01:00 PM',
       status: RideStatus.upcoming,
+      jobId: 'JOB-2024-003',
     ),
     Ride(
       id: '4',
@@ -63,6 +67,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       expectedDeparture: '09:00 AM',
       expectedArrival: '11:30 AM',
       status: RideStatus.past,
+      remarks: 'Completed successfully. No issues reported.',
+      jobId: 'JOB-2024-004',
     ),
   ];
 
@@ -90,8 +96,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Pututchini Dashboard',
-              style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              'Dashboard',
+              style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
           ],
         ),
@@ -139,7 +145,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               content: const Text(
-                'Are you sure you want to trigger the panic alert?',
+                'Are you sure you want to trigger the panic alert? We will notify the admin.',
               ),
               actions: [
                 TextButton(
@@ -378,9 +384,29 @@ class _RideCardState extends State<_RideCard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header with Truck ID
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
+                    if (isCurrentRide)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'IN PROGRESS',
+                          style: tt.bodyLarge?.copyWith(
+                            fontSize: 13,
+                            color: cs.onPrimaryContainer,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -399,22 +425,22 @@ class _RideCardState extends State<_RideCard>
                         ),
                       ),
                     ),
-                    if (isCurrentRide)
+                    if ((widget.ride.jobId?.isNotEmpty ?? false))
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: cs.primaryContainer,
-                          borderRadius: BorderRadius.circular(20),
+                          color: cs.secondaryContainer,
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          'IN PROGRESS',
+                          'JOB ID: ${widget.ride.jobId}',
                           style: tt.labelLarge?.copyWith(
-                            fontSize: 12,
-                            color: cs.onPrimaryContainer,
-                            letterSpacing: 0.4,
+                            fontSize: 13,
+                            color: cs.onSecondaryContainer,
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
@@ -542,5 +568,3 @@ class _RideCardState extends State<_RideCard>
     );
   }
 }
-
-
