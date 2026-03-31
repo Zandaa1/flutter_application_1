@@ -336,53 +336,77 @@ class _RideCard extends StatefulWidget {
 
 class _RideCardState extends State<_RideCard>
     with SingleTickerProviderStateMixin {
+  late AnimationController _blinkController;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    if (widget.ride.status == RideStatus.current) {
+      _blinkController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _blinkController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final isCurrentRide = widget.ride.status == RideStatus.current;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: isCurrentRide
-            ? [
-                BoxShadow(
-                  color: cs.primary.withOpacity(0.25),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-        border: Border.all(
-          color: isCurrentRide ? cs.primary : cs.outlineVariant,
-          width: isCurrentRide ? 2 : 1,
+    return FadeTransition(
+      opacity: isCurrentRide
+          ? Tween<double>(begin: 0.8, end: 1.0).animate(_blinkController)
+          : AlwaysStoppedAnimation(1.0),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isCurrentRide
+              ? [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+          border: Border.all(
+            color: isCurrentRide ? cs.primary : cs.outlineVariant,
+            width: isCurrentRide ? 2 : 1,
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (widget.ride.status == RideStatus.current) {
-              Navigator.pushNamed(context, '/active-ride');
-            } else if (widget.ride.status == RideStatus.upcoming) {
-              Navigator.pushNamed(context, '/pre-ride');
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              if (widget.ride.status == RideStatus.current) {
+                Navigator.pushNamed(context, '/active-ride');
+              } else if (widget.ride.status == RideStatus.upcoming) {
+                Navigator.pushNamed(context, '/pre-ride');
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // Header with Truck ID
                 Wrap(
                   spacing: 8,
@@ -402,6 +426,7 @@ class _RideCardState extends State<_RideCard>
                           'IN PROGRESS',
                           style: tt.bodyLarge?.copyWith(
                             fontSize: 13,
+                            fontWeight: FontWeight.bold,
                             color: cs.onPrimaryContainer,
                             letterSpacing: 0.2,
                           ),
@@ -514,7 +539,7 @@ class _RideCardState extends State<_RideCard>
                 ),
 
                 const SizedBox(height: 20),
-                Divider(color: cs.outlineVariant.withOpacity(0.6)),
+                Divider(color: cs.outlineVariant.withValues(alpha: 0.6)),
                 const SizedBox(height: 12),
 
                 // Footer (Date & Duration)
@@ -565,6 +590,14 @@ class _RideCardState extends State<_RideCard>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
+}
+// Final attempt to fix compiler sync
+
+
+
+
+
+

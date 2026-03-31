@@ -249,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -259,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
